@@ -3,7 +3,13 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
+import { Header } from "./components/layout/Header";
+import Dashboard from "./pages/Dashboard";
+import NewSession from "./pages/NewSession";
+import SessionDetail from "./pages/SessionDetail";
+import PracticeGuide from "./pages/PracticeGuide";
+import PracticeRoom from "./pages/PracticeRoom";
+import Feedback from "./pages/Feedback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -14,9 +20,14 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <Header />
         <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/new" element={<NewSession />} />
+          <Route path="/session/:id" element={<SessionDetail />} />
+          <Route path="/practice/:id" element={<PracticeGuide />} />
+          <Route path="/practice/:id/run" element={<PracticeRoom />} />
+          <Route path="/feedback/:id" element={<Feedback />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
