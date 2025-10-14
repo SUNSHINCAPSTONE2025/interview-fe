@@ -17,29 +17,29 @@ export default function PracticeGuide() {
   // Mock session data
   const session = {
     id: "1",
-    title: "Google Software Engineer",
+    title: "구글 소프트웨어 엔지니어",
     mode: "Interview" as const,
-    lastFeedback: "Focus on providing more specific examples in your STAR responses",
+    lastFeedback: "STAR 답변에서 더 구체적인 예시를 제공하는 데 집중하세요",
     totalQuestions: 15,
     practiceTypes: {
-      "technical": "Technical Skills (8 questions)",
-      "behavioral": "Behavioral Questions (7 questions)", 
-      "both": "Complete Interview (15 questions)"
+      "technical": "기술 질문 (8개)",
+      "behavioral": "행동 질문 (7개)", 
+      "both": "전체 면접 (15개)"
     }
   };
 
   const goals = [
-    { id: "examples", label: "Use specific examples in answers", time: "5 min" },
-    { id: "pace", label: "Practice speaking at optimal pace", time: "3 min" },
-    { id: "structure", label: "Improve STAR method structure", time: "7 min" },
-    { id: "confidence", label: "Build confident delivery", time: "4 min" }
+    { id: "examples", label: "답변에 구체적인 예시 사용", time: "5분" },
+    { id: "pace", label: "최적의 속도로 말하기 연습", time: "3분" },
+    { id: "structure", label: "STAR 방법 구조 개선", time: "7분" },
+    { id: "confidence", label: "자신감 있는 전달 구축", time: "4분" }
   ];
 
   const tips = [
-    "Structure answers using STAR method (Situation, Task, Action, Result)",
-    "Maintain eye contact with the camera throughout your response",
-    "Take a brief pause before answering to collect your thoughts",
-    "Speak clearly and at a moderate pace - aim for 150-160 words per minute"
+    "STAR 방법을 사용하여 답변 구조화 (상황, 과제, 행동, 결과)",
+    "답변하는 동안 카메라와 시선을 유지하세요",
+    "답변하기 전에 잠시 멈춰서 생각을 정리하세요",
+    "명확하고 적절한 속도로 말하세요 - 분당 150-160단어를 목표로 하세요"
   ];
 
   const handleGoalToggle = (goalId: string) => {
@@ -65,7 +65,7 @@ export default function PracticeGuide() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold">{session.title}</h1>
-              <p className="text-muted-foreground">Practice Guide</p>
+              <p className="text-muted-foreground">연습 가이드</p>
             </div>
           </div>
 
@@ -75,7 +75,7 @@ export default function PracticeGuide() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Target className="h-5 w-5" />
-                  Select Practice Type
+                  연습 유형 선택
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -95,7 +95,7 @@ export default function PracticeGuide() {
                     onClick={() => setStep(2)} 
                     disabled={!practiceType}
                   >
-                    Continue
+                    계속
                   </Button>
                 </div>
               </CardContent>
@@ -108,10 +108,10 @@ export default function PracticeGuide() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Star className="h-5 w-5" />
-                  Today's Focus Goals
+                  오늘의 목표
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Choose 2-3 specific areas to focus on during this practice session
+                  이번 연습 세션에서 집중할 2-3개의 구체적인 영역을 선택하세요
                 </p>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -140,21 +140,21 @@ export default function PracticeGuide() {
                 {selectedGoals.length > 0 && (
                   <div className="p-4 bg-success-light rounded-lg">
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">Estimated Time:</span>
-                      <Badge variant="outline">~{estimatedTime} minutes</Badge>
+                      <span className="font-medium">예상 시간:</span>
+                      <Badge variant="outline">~{estimatedTime}분</Badge>
                     </div>
                   </div>
                 )}
 
                 <div className="flex justify-between">
                   <Button variant="outline" onClick={() => setStep(1)}>
-                    Back
+                    뒤로
                   </Button>
                   <Button 
                     onClick={() => setStep(3)} 
                     disabled={selectedGoals.length === 0}
                   >
-                    Continue
+                    계속
                   </Button>
                 </div>
               </CardContent>
@@ -170,7 +170,7 @@ export default function PracticeGuide() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-warning">
                       <Lightbulb className="h-5 w-5" />
-                      Key Insight from Last Session
+                      지난 세션의 주요 인사이트
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -184,7 +184,7 @@ export default function PracticeGuide() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Lightbulb className="h-5 w-5" />
-                    Practice Tips
+                    연습 팁
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -205,11 +205,11 @@ export default function PracticeGuide() {
               <Card className="bg-gradient-primary text-primary-foreground shadow-hover">
                 <CardContent className="p-6">
                   <div className="space-y-4">
-                    <h3 className="font-semibold text-lg">Ready to Practice!</h3>
+                    <h3 className="font-semibold text-lg">연습 준비 완료!</h3>
                     <div className="space-y-2 text-sm opacity-90">
-                      <p>• Type: {session.practiceTypes[practiceType as keyof typeof session.practiceTypes]}</p>
-                      <p>• Goals: {selectedGoals.length} selected</p>
-                      <p>• Estimated time: ~{estimatedTime} minutes</p>
+                      <p>• 유형: {session.practiceTypes[practiceType as keyof typeof session.practiceTypes]}</p>
+                      <p>• 목표: {selectedGoals.length}개 선택됨</p>
+                      <p>• 예상 시간: ~{estimatedTime}분</p>
                     </div>
                   </div>
                 </CardContent>
@@ -218,7 +218,7 @@ export default function PracticeGuide() {
               {/* Action Buttons */}
               <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setStep(2)}>
-                  Back
+                  뒤로
                 </Button>
                 <Button 
                   variant="hero" 
@@ -226,7 +226,7 @@ export default function PracticeGuide() {
                   className="shadow-hover"
                 >
                   <Play className="h-5 w-5 mr-2" />
-                  Start Practice
+                  연습 시작
                 </Button>
               </div>
             </div>

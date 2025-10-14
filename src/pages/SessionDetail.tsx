@@ -12,30 +12,30 @@ export default function SessionDetail() {
   // Mock session data
   const session = {
     id: "1",
-    title: "Google Software Engineer",
+    title: "구글 소프트웨어 엔지니어",
     mode: "Interview" as const,
-    role: "Senior Frontend Developer",
+    role: "시니어 프론트엔드 개발자",
     progress: 65,
     daysLeft: 12,
     completedSessions: 19,
     totalSessions: 30,
-    company: "Google",
+    company: "구글",
     interviewDate: "2025-10-12",
-    jobCategory: "Technical",
+    jobCategory: "기술",
     qaItems: [
-      { question: "Tell me about your experience with React", answer: "I have 5+ years..." },
-      { question: "Describe a challenging technical problem", answer: "In my previous role..." }
+      { question: "React 경험에 대해 말씀해주세요", answer: "5년 이상의 경험이..." },
+      { question: "어려운 기술 문제를 설명해주세요", answer: "이전 역할에서..." }
     ],
     lastFeedback: {
       score: 78,
       improvement: "+5",
-      strengths: ["Clear communication", "Good examples"],
-      improvements: ["Pace control", "Eye contact"]
+      strengths: ["명확한 의사소통", "좋은 예시"],
+      improvements: ["속도 조절", "시선 접촉"]
     },
     history: [
-      { date: "2025-09-28", score: 78, type: "Technical", duration: "45 min" },
-      { date: "2025-09-26", score: 73, type: "Behavioral", duration: "40 min" },
-      { date: "2025-09-24", score: 70, type: "Both", duration: "60 min" }
+      { date: "2025-09-28", score: 78, type: "기술", duration: "45분" },
+      { date: "2025-09-26", score: 73, type: "행동", duration: "40분" },
+      { date: "2025-09-24", score: 70, type: "전체", duration: "60분" }
     ]
   };
 
@@ -59,17 +59,17 @@ export default function SessionDetail() {
           <Button asChild variant="hero">
             <Link to={`/practice/${id}`}>
               <Play className="h-5 w-5 mr-2" />
-              Start Practice
+              연습 시작
             </Link>
           </Button>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4 lg:w-auto">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="data">Input Data</TabsTrigger>
-            <TabsTrigger value="plan">Plan</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+            <TabsTrigger value="overview">개요</TabsTrigger>
+            <TabsTrigger value="data">입력 데이터</TabsTrigger>
+            <TabsTrigger value="plan">계획</TabsTrigger>
+            <TabsTrigger value="history">기록</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -80,14 +80,14 @@ export default function SessionDetail() {
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <TrendingUp className="h-4 w-4" />
-                    Overall Progress
+                    전체 진행률
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-3xl font-bold mb-2">{session.progress}%</div>
                   <Progress value={session.progress} className="mb-2" />
                   <p className="text-xs text-muted-foreground">
-                    {session.completedSessions} of {session.totalSessions} sessions
+                    {session.completedSessions} / {session.totalSessions} 세션
                   </p>
                 </CardContent>
               </Card>
@@ -98,13 +98,13 @@ export default function SessionDetail() {
                   <CardHeader>
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Calendar className="h-4 w-4" />
-                      Time Remaining
+                      남은 시간
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold mb-2">D-{session.daysLeft}</div>
                     <p className="text-xs text-muted-foreground">
-                      Interview on {new Date(session.interviewDate).toLocaleDateString()}
+                      면접: {new Date(session.interviewDate).toLocaleDateString('ko-KR')}
                     </p>
                   </CardContent>
                 </Card>
@@ -115,7 +115,7 @@ export default function SessionDetail() {
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Award className="h-4 w-4" />
-                    Latest Score
+                    최근 점수
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -135,18 +135,18 @@ export default function SessionDetail() {
             {/* Recommended Practice */}
             <Card className="bg-gradient-primary text-primary-foreground shadow-hover">
               <CardHeader>
-                <CardTitle>Today's Recommended Practice</CardTitle>
+                <CardTitle>오늘의 추천 연습</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p>Based on your progress, we recommend focusing on behavioral questions today.</p>
+                <p>진행 상황을 고려할 때, 오늘은 행동 질문에 집중하는 것을 추천합니다.</p>
                 <div className="flex items-center gap-4 text-sm opacity-90">
                   <span className="flex items-center gap-1">
                     <Timer className="h-4 w-4" />
-                    ~35 minutes
+                    ~35분
                   </span>
                   <span className="flex items-center gap-1">
                     <MessageSquare className="h-4 w-4" />
-                    7 questions
+                    7개 질문
                   </span>
                 </div>
               </CardContent>
@@ -155,12 +155,12 @@ export default function SessionDetail() {
             {/* Recent Feedback Highlights */}
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
-                <CardTitle>Recent Feedback Highlights</CardTitle>
+                <CardTitle>최근 피드백 하이라이트</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-semibold text-sm mb-3 text-success">Strengths</h4>
+                    <h4 className="font-semibold text-sm mb-3 text-success">강점</h4>
                     <ul className="space-y-2">
                       {session.lastFeedback.strengths.map((strength, i) => (
                         <li key={i} className="text-sm flex items-start gap-2">
@@ -171,7 +171,7 @@ export default function SessionDetail() {
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm mb-3 text-warning">Areas to Improve</h4>
+                    <h4 className="font-semibold text-sm mb-3 text-warning">개선 영역</h4>
                     <ul className="space-y-2">
                       {session.lastFeedback.improvements.map((improvement, i) => (
                         <li key={i} className="text-sm flex items-start gap-2">
@@ -190,30 +190,30 @@ export default function SessionDetail() {
           <TabsContent value="data">
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
-                <CardTitle>Session Information</CardTitle>
+                <CardTitle>세션 정보</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
-                    <Label className="text-sm font-medium">Company</Label>
+                    <Label className="text-sm font-medium">회사</Label>
                     <p className="mt-1">{session.company}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Role</Label>
+                    <Label className="text-sm font-medium">직무</Label>
                     <p className="mt-1">{session.role}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Category</Label>
+                    <Label className="text-sm font-medium">카테고리</Label>
                     <p className="mt-1">{session.jobCategory}</p>
                   </div>
                   <div>
-                    <Label className="text-sm font-medium">Interview Date</Label>
-                    <p className="mt-1">{new Date(session.interviewDate).toLocaleDateString()}</p>
+                    <Label className="text-sm font-medium">면접 날짜</Label>
+                    <p className="mt-1">{new Date(session.interviewDate).toLocaleDateString('ko-KR')}</p>
                   </div>
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium mb-3 block">Resume Q&A</Label>
+                  <Label className="text-sm font-medium mb-3 block">이력서 Q&A</Label>
                   <div className="space-y-4">
                     {session.qaItems.map((item, index) => (
                       <div key={index} className="p-4 bg-muted/50 rounded-lg">
@@ -224,7 +224,7 @@ export default function SessionDetail() {
                   </div>
                 </div>
 
-                <Button variant="outline">Edit Information</Button>
+                <Button variant="outline">정보 수정</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -235,10 +235,10 @@ export default function SessionDetail() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Calendar className="h-5 w-5" />
-                  Practice Roadmap
+                  연습 로드맵
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  Recommended schedule leading up to your interview
+                  면접까지 추천되는 일정
                 </p>
               </CardHeader>
               <CardContent>
@@ -249,13 +249,13 @@ export default function SessionDetail() {
                     }`}>
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium">Week {i + 1} Goals</p>
+                          <p className="font-medium">{i + 1}주차 목표</p>
                           <p className="text-sm text-muted-foreground">
-                            {i === 0 ? "Current week" : `${(i * 7)} days from now`}
+                            {i === 0 ? "현재 주" : `${(i * 7)}일 후`}
                           </p>
                         </div>
                         <Badge variant={i === 0 ? "default" : "outline"}>
-                          {i < 2 ? "In Progress" : "Upcoming"}
+                          {i < 2 ? "진행 중" : "예정"}
                         </Badge>
                       </div>
                     </div>
@@ -269,7 +269,7 @@ export default function SessionDetail() {
           <TabsContent value="history">
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
-                <CardTitle>Practice History</CardTitle>
+                <CardTitle>연습 기록</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -281,7 +281,7 @@ export default function SessionDetail() {
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium">{record.type} Practice</p>
+                          <p className="font-medium">{record.type} 연습</p>
                           <p className="text-sm text-muted-foreground">{record.date} • {record.duration}</p>
                         </div>
                         <div className="text-right">

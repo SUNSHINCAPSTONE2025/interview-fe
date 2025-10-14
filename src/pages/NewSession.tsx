@@ -79,8 +79,8 @@ export default function NewSession() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Create New Session</h1>
-              <p className="text-muted-foreground">Step {step} of 3</p>
+              <h1 className="text-3xl font-bold">새 세션 만들기</h1>
+              <p className="text-muted-foreground">{step} / 3 단계</p>
             </div>
           </div>
 
@@ -96,7 +96,7 @@ export default function NewSession() {
           {step === 1 && (
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
-                <CardTitle>Choose Your Practice Mode</CardTitle>
+                <CardTitle>연습 모드 선택</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -109,9 +109,9 @@ export default function NewSession() {
                     }`}
                   >
                     <Briefcase className="h-8 w-8 text-primary mb-4" />
-                    <h3 className="font-semibold text-lg mb-2">Interview Practice</h3>
+                    <h3 className="font-semibold text-lg mb-2">면접 연습</h3>
                     <p className="text-muted-foreground text-sm">
-                      Prepare for job interviews with customized questions based on your resume and job description.
+                      이력서와 직무 설명을 기반으로 맞춤형 질문으로 면접을 준비하세요.
                     </p>
                   </button>
                   
@@ -124,9 +124,9 @@ export default function NewSession() {
                     }`}
                   >
                     <Presentation className="h-8 w-8 text-primary mb-4" />
-                    <h3 className="font-semibold text-lg mb-2">Presentation Practice</h3>
+                    <h3 className="font-semibold text-lg mb-2">발표 연습</h3>
                     <p className="text-muted-foreground text-sm">
-                      Perfect your presentations with script-based practice and delivery feedback.
+                      스크립트 기반 연습과 전달 피드백으로 발표를 완벽하게 만드세요.
                     </p>
                   </button>
                 </div>
@@ -137,7 +137,7 @@ export default function NewSession() {
                     disabled={!mode}
                     variant="default"
                   >
-                    Continue
+                    계속
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -149,32 +149,32 @@ export default function NewSession() {
           {step === 2 && mode === "Interview" && (
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
-                <CardTitle>Interview Details</CardTitle>
+                <CardTitle>면접 상세 정보</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="company">Company Name *</Label>
+                    <Label htmlFor="company">회사명 *</Label>
                     <Input
                       id="company"
                       value={formData.company}
                       onChange={(e) => setFormData({...formData, company: e.target.value})}
-                      placeholder="e.g., Google"
+                      placeholder="예: 구글"
                     />
                   </div>
                   <div>
-                    <Label htmlFor="role">Role *</Label>
+                    <Label htmlFor="role">직무 *</Label>
                     <Input
                       id="role"
                       value={formData.role}
                       onChange={(e) => setFormData({...formData, role: e.target.value})}
-                      placeholder="e.g., Senior Frontend Developer"
+                      placeholder="예: 시니어 프론트엔드 개발자"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="interviewDate">Interview Date</Label>
+                  <Label htmlFor="interviewDate">면접 날짜</Label>
                   <Input
                     id="interviewDate"
                     type="date"
@@ -184,7 +184,7 @@ export default function NewSession() {
                 </div>
 
                 <div>
-                  <Label>Job Category</Label>
+                  <Label>직무 카테고리</Label>
                   <RadioGroup 
                     value={formData.jobCategory} 
                     onValueChange={(value) => setFormData({...formData, jobCategory: value})}
@@ -192,32 +192,32 @@ export default function NewSession() {
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="technical" id="technical" />
-                      <Label htmlFor="technical">Technical</Label>
+                      <Label htmlFor="technical">기술직</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="product" id="product" />
-                      <Label htmlFor="product">Product</Label>
+                      <Label htmlFor="product">제품</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="design" id="design" />
-                      <Label htmlFor="design">Design</Label>
+                      <Label htmlFor="design">디자인</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="business" id="business" />
-                      <Label htmlFor="business">Business</Label>
+                      <Label htmlFor="business">비즈니스</Label>
                     </div>
                   </RadioGroup>
                 </div>
 
                 <div>
-                  <Label>Resume Q&A *</Label>
+                  <Label>이력서 Q&A *</Label>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Add questions and answers about your background and experience.
+                    본인의 배경과 경험에 대한 질문과 답변을 추가하세요.
                   </p>
                   {qaItems.map((item, index) => (
                     <div key={index} className="space-y-2 p-4 border border-border rounded-lg mb-4">
                       <div className="flex justify-between items-center">
-                        <Label>Question {index + 1}</Label>
+                        <Label>질문 {index + 1}</Label>
                         {qaItems.length > 1 && (
                           <Button
                             variant="ghost"
@@ -229,12 +229,12 @@ export default function NewSession() {
                         )}
                       </div>
                       <Input
-                        placeholder="e.g., Tell me about your previous experience with React"
+                        placeholder="예: React를 사용한 이전 경험에 대해 말씀해주세요"
                         value={item.question}
                         onChange={(e) => updateQAItem(index, "question", e.target.value)}
                       />
                       <Textarea
-                        placeholder="Your answer..."
+                        placeholder="답변을 입력하세요..."
                         value={item.answer}
                         onChange={(e) => updateQAItem(index, "answer", e.target.value)}
                         rows={3}
@@ -243,17 +243,17 @@ export default function NewSession() {
                   ))}
                   <Button variant="outline" onClick={addQAItem} className="w-full">
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Question
+                    질문 추가
                   </Button>
                 </div>
 
                 <div>
-                  <Label htmlFor="jobDescription">Job Description</Label>
+                  <Label htmlFor="jobDescription">직무 설명</Label>
                   <Textarea
                     id="jobDescription"
                     value={formData.jobDescription}
                     onChange={(e) => setFormData({...formData, jobDescription: e.target.value})}
-                    placeholder="Paste the job description here..."
+                    placeholder="직무 설명을 여기에 붙여넣으세요..."
                     rows={4}
                   />
                 </div>
@@ -261,10 +261,10 @@ export default function NewSession() {
                 <div className="flex justify-between">
                   <Button variant="outline" onClick={handlePrev}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
+                    뒤로
                   </Button>
                   <Button onClick={handleNext}>
-                    Continue
+                    계속
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -276,43 +276,43 @@ export default function NewSession() {
           {step === 2 && mode === "Presentation" && (
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
-                <CardTitle>Presentation Details</CardTitle>
+                <CardTitle>발표 상세 정보</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div>
-                  <Label htmlFor="title">Presentation Title *</Label>
+                  <Label htmlFor="title">발표 제목 *</Label>
                   <Input
                     id="title"
                     value={formData.title}
                     onChange={(e) => setFormData({...formData, title: e.target.value})}
-                    placeholder="e.g., AI in Healthcare: Future Prospects"
+                    placeholder="예: 헬스케어의 AI: 미래 전망"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="duration">Expected Duration (minutes)</Label>
+                  <Label htmlFor="duration">예상 시간 (분)</Label>
                   <Input
                     id="duration"
                     type="number"
                     value={formData.duration}
                     onChange={(e) => setFormData({...formData, duration: e.target.value})}
-                    placeholder="e.g., 15"
+                    placeholder="예: 15"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="script">Presentation Script *</Label>
+                  <Label htmlFor="script">발표 스크립트 *</Label>
                   <Textarea
                     id="script"
                     value={formData.script}
                     onChange={(e) => setFormData({...formData, script: e.target.value})}
-                    placeholder="Write your presentation script here..."
+                    placeholder="발표 스크립트를 여기에 작성하세요..."
                     rows={8}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="slidesUrl">Slides URL (optional)</Label>
+                  <Label htmlFor="slidesUrl">슬라이드 URL (선택사항)</Label>
                   <Input
                     id="slidesUrl"
                     value={formData.slidesUrl}
@@ -322,7 +322,7 @@ export default function NewSession() {
                 </div>
 
                 <div>
-                  <Label>Audience Type</Label>
+                  <Label>청중 유형</Label>
                   <RadioGroup 
                     value={formData.audienceType} 
                     onValueChange={(value) => setFormData({...formData, audienceType: value})}
@@ -330,15 +330,15 @@ export default function NewSession() {
                   >
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="peers" id="peers" />
-                      <Label htmlFor="peers">Peers/Colleagues</Label>
+                      <Label htmlFor="peers">동료/직장 동료</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="executives" id="executives" />
-                      <Label htmlFor="executives">Executives/Leadership</Label>
+                      <Label htmlFor="executives">경영진/리더십</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                       <RadioGroupItem value="public" id="public" />
-                      <Label htmlFor="public">General Public</Label>
+                      <Label htmlFor="public">일반 대중</Label>
                     </div>
                   </RadioGroup>
                 </div>
@@ -346,10 +346,10 @@ export default function NewSession() {
                 <div className="flex justify-between">
                   <Button variant="outline" onClick={handlePrev}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
+                    뒤로
                   </Button>
                   <Button onClick={handleNext}>
-                    Continue
+                    계속
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </div>
@@ -361,32 +361,32 @@ export default function NewSession() {
           {step === 3 && (
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
-                <CardTitle>Session Summary</CardTitle>
+                <CardTitle>세션 요약</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
                   <h3 className="font-semibold text-lg mb-4">
-                    {mode} Practice Session
+                    {mode === "Interview" ? "면접" : "발표"} 연습 세션
                   </h3>
                   
                   {mode === "Interview" ? (
                     <div className="space-y-2 text-sm">
-                      <p><strong>Company:</strong> {formData.company}</p>
-                      <p><strong>Role:</strong> {formData.role}</p>
+                      <p><strong>회사:</strong> {formData.company}</p>
+                      <p><strong>직무:</strong> {formData.role}</p>
                       {formData.interviewDate && (
-                        <p><strong>Interview Date:</strong> {formData.interviewDate}</p>
+                        <p><strong>면접 날짜:</strong> {formData.interviewDate}</p>
                       )}
-                      <p><strong>Questions:</strong> {qaItems.length} prepared</p>
-                      <p><strong>Category:</strong> {formData.jobCategory || "Not specified"}</p>
+                      <p><strong>질문:</strong> {qaItems.length}개 준비됨</p>
+                      <p><strong>카테고리:</strong> {formData.jobCategory || "지정되지 않음"}</p>
                     </div>
                   ) : (
                     <div className="space-y-2 text-sm">
-                      <p><strong>Title:</strong> {formData.title}</p>
+                      <p><strong>제목:</strong> {formData.title}</p>
                       {formData.duration && (
-                        <p><strong>Duration:</strong> {formData.duration} minutes</p>
+                        <p><strong>시간:</strong> {formData.duration}분</p>
                       )}
-                      <p><strong>Script Length:</strong> {formData.script.length} characters</p>
-                      <p><strong>Audience:</strong> {formData.audienceType || "Not specified"}</p>
+                      <p><strong>스크립트 길이:</strong> {formData.script.length}자</p>
+                      <p><strong>청중:</strong> {formData.audienceType || "지정되지 않음"}</p>
                     </div>
                   )}
                 </div>
@@ -394,10 +394,10 @@ export default function NewSession() {
                 <div className="flex justify-between">
                   <Button variant="outline" onClick={handlePrev}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
-                    Back
+                    뒤로
                   </Button>
                   <Button onClick={handleCreate} variant="success">
-                    Create Session
+                    세션 만들기
                   </Button>
                 </div>
               </CardContent>
