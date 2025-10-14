@@ -69,14 +69,14 @@ export function SessionCard({
         <div className="space-y-3">
           <div>
             <div className="flex justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Progress</span>
+              <span className="text-muted-foreground">진행률</span>
               <span className="font-medium">{progress}%</span>
             </div>
             <Progress value={progress} className="h-2" />
           </div>
           
           <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>{completedSessions}/{totalSessions} sessions</span>
+            <span>{completedSessions}/{totalSessions} 세션</span>
             {lastPractice && (
               <span className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
@@ -92,12 +92,12 @@ export function SessionCard({
           <Button asChild className="flex-1" variant="default">
             <Link to={`/practice/${id}`}>
               <Play className="h-4 w-4 mr-2" />
-              Start Practice
+              연습 시작
             </Link>
           </Button>
           <Button asChild variant="outline">
             <Link to={`/session/${id}`}>
-              Details
+              상세보기
             </Link>
           </Button>
         </div>
