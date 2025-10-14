@@ -1,4 +1,6 @@
-# WSUNSHINCAPSTONE2025/interview-fe-test
+# interview-fe-test
+발화 불안 취준생을 위한 AI 기반 접 연습 서비스 FE 리포입니다.
+
 
 ## How can I edit this code?
 
