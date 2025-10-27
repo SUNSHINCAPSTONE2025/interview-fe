@@ -7,7 +7,7 @@ export function Header() {
     <header className="border-b border-border bg-card/50 backdrop-blur-sm">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          스피치 피드백
+          NEVER MIND
         </Link>
         
         <nav className="hidden md:flex items-center gap-6">
