@@ -10,6 +10,7 @@ import SessionDetail from "./pages/SessionDetail";
 import PracticeGuide from "./pages/PracticeGuide";
 import PracticeRoom from "./pages/PracticeRoom";
 import Feedback from "./pages/Feedback";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/new" element={<NewSession />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/session/:id" element={<SessionDetail />} />
           <Route path="/practice/:id" element={<PracticeGuide />} />
           <Route path="/practice/:id/run" element={<PracticeRoom />} />

@@ -20,9 +20,11 @@ export function Header() {
           <Button variant="ghost" size="icon">
             <Settings className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <User className="h-4 w-4" />
-          </Button>
+          <Link to="/auth">
+            <Button variant="ghost" size="icon">
+              <User className="h-4 w-4" />
+            </Button>
+          </Link>
         </div>
       </div>
     </header>
