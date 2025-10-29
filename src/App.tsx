@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import NewSession from "./pages/NewSession";
 import SessionDetail from "./pages/SessionDetail";
 import PracticeGuide from "./pages/PracticeGuide";
+import PracticeSetup from "./pages/PracticeSetup";
 import PracticeRoom from "./pages/PracticeRoom";
 import Feedback from "./pages/Feedback";
 import Auth from "./pages/Auth";
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/session/:id" element={<SessionDetail />} />
           <Route path="/practice/:id" element={<PracticeGuide />} />
+          <Route path="/practice/:id/setup" element={<PracticeSetup />} />
           <Route path="/practice/:id/run" element={<PracticeRoom />} />
           <Route path="/feedback/:id" element={<Feedback />} />
           <Route path="*" element={<NotFound />} />
