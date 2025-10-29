@@ -18,15 +18,15 @@
     --popover: 0 0% 100%;
     --popover-foreground: 225 25% 15%;
 
-    /* Primary - Professional green for growth and trust */
-    --primary: 153 62% 43%;
+    /* Primary - Modern blue for professionalism and trust */
+    --primary: 233 90% 61%;
     --primary-foreground: 0 0% 100%;
-    --primary-light: 153 60% 60%;
-    --primary-dark: 153 65% 30%;
+    --primary-light: 233 85% 75%;
+    --primary-dark: 233 90% 45%;
 
-    /* Secondary - Warm accent for highlights */
-    --secondary: 30 75% 95%;
-    --secondary-foreground: 30 80% 35%;
+    /* Secondary - Soft purple accent */
+    --secondary: 250 85% 95%;
+    --secondary-foreground: 250 70% 40%;
 
     /* Success - Green for positive feedback */
     --success: 142 71% 45%;
@@ -34,9 +34,9 @@
     --success-light: 142 71% 85%;
 
     /* Warning - Orange for improvement areas */
-    --warning: 30 75% 55%;
+    --warning: 30 85% 60%;
     --warning-foreground: 0 0% 100%;
-    --warning-light: 30 75% 85%;
+    --warning-light: 30 85% 85%;
 
     /* Muted colors */
     --muted: 220 14% 96%;
