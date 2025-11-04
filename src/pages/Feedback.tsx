@@ -233,10 +233,11 @@ export default function Feedback() {
               </CardHeader>
               <CardContent>
                 <Tabs defaultValue="transcript" className="space-y-6">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="transcript">답변 내용</TabsTrigger>
-                    <TabsTrigger value="video">영상 기반</TabsTrigger>
-                    <TabsTrigger value="audio">음성 기반</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="transcript">답변</TabsTrigger>
+                    <TabsTrigger value="expression">표정</TabsTrigger>
+                    <TabsTrigger value="voice">목소리</TabsTrigger>
+                    <TabsTrigger value="posture">자세</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="transcript">
@@ -246,43 +247,28 @@ export default function Feedback() {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="video" className="space-y-6">
-                    {/* 자세 섹션 */}
-                    <div>
-                      <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                        <Video className="h-5 w-5 text-primary" />
-                        자세
-                      </h3>
-                      <Card className="bg-muted/30">
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-medium">어깨 기울기</span>
-                            <span className="text-2xl font-bold text-primary">
-                              {question.videoFeedback.shoulderTilt.score}
-                            </span>
-                          </div>
-                          <Progress value={question.videoFeedback.shoulderTilt.score} className="h-2 mb-3" />
-                          <p className="text-sm text-muted-foreground">
-                            {question.videoFeedback.shoulderTilt.feedback}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-
-                    {/* 표정 섹션 */}
-                    <div>
-                      <h3 className="font-semibold text-lg mb-4">표정</h3>
-                      <div className="grid md:grid-cols-3 gap-4">
+                  <TabsContent value="expression">
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* 좌측: 동영상 */}
+                      <div className="bg-muted/30 rounded-lg aspect-video flex items-center justify-center">
+                        <Video className="h-12 w-12 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground ml-2">동영상 플레이어</p>
+                      </div>
+                      
+                      {/* 우측: 점수 */}
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-lg mb-4">표정 분석</h3>
+                        
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
-                            <div className="text-center mb-2">
-                              <div className="text-2xl font-bold text-primary mb-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">시선</span>
+                              <span className="text-2xl font-bold text-primary">
                                 {question.videoFeedback.gaze.score}
-                              </div>
-                              <div className="text-xs text-muted-foreground mb-3">시선</div>
-                              <Progress value={question.videoFeedback.gaze.score} className="h-1.5" />
+                              </span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-3">
+                            <Progress value={question.videoFeedback.gaze.score} className="h-2 mb-3" />
+                            <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.gaze.feedback}
                             </p>
                           </CardContent>
@@ -290,14 +276,14 @@ export default function Feedback() {
 
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
-                            <div className="text-center mb-2">
-                              <div className="text-2xl font-bold text-primary mb-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">눈 깜빡임</span>
+                              <span className="text-2xl font-bold text-primary">
                                 {question.videoFeedback.blink.score}
-                              </div>
-                              <div className="text-xs text-muted-foreground mb-3">눈 깜빡임</div>
-                              <Progress value={question.videoFeedback.blink.score} className="h-1.5" />
+                              </span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-3">
+                            <Progress value={question.videoFeedback.blink.score} className="h-2 mb-3" />
+                            <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.blink.feedback}
                             </p>
                           </CardContent>
@@ -305,35 +291,44 @@ export default function Feedback() {
 
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
-                            <div className="text-center mb-2">
-                              <div className="text-2xl font-bold text-primary mb-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">입꼬리</span>
+                              <span className="text-2xl font-bold text-primary">
                                 {question.videoFeedback.smile.score}
-                              </div>
-                              <div className="text-xs text-muted-foreground mb-3">입꼬리</div>
-                              <Progress value={question.videoFeedback.smile.score} className="h-1.5" />
+                              </span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-3">
+                            <Progress value={question.videoFeedback.smile.score} className="h-2 mb-3" />
+                            <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.smile.feedback}
                             </p>
                           </CardContent>
                         </Card>
                       </div>
                     </div>
+                  </TabsContent>
 
-                    {/* 목소리 섹션 */}
-                    <div>
-                      <h3 className="font-semibold text-lg mb-4">목소리</h3>
-                      <div className="grid md:grid-cols-3 gap-4">
+                  <TabsContent value="voice">
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* 좌측: 동영상 */}
+                      <div className="bg-muted/30 rounded-lg aspect-video flex items-center justify-center">
+                        <Video className="h-12 w-12 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground ml-2">동영상 플레이어</p>
+                      </div>
+                      
+                      {/* 우측: 점수 */}
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-lg mb-4">목소리 분석</h3>
+                        
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
-                            <div className="text-center mb-2">
-                              <div className="text-2xl font-bold text-primary mb-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">목소리 떨림</span>
+                              <span className="text-2xl font-bold text-primary">
                                 {question.videoFeedback.voiceShake.score}
-                              </div>
-                              <div className="text-xs text-muted-foreground mb-3">목소리 떨림</div>
-                              <Progress value={question.videoFeedback.voiceShake.score} className="h-1.5" />
+                              </span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-3">
+                            <Progress value={question.videoFeedback.voiceShake.score} className="h-2 mb-3" />
+                            <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.voiceShake.feedback}
                             </p>
                           </CardContent>
@@ -341,14 +336,14 @@ export default function Feedback() {
 
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
-                            <div className="text-center mb-2">
-                              <div className="text-2xl font-bold text-primary mb-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">공백</span>
+                              <span className="text-2xl font-bold text-primary">
                                 {question.videoFeedback.silence.score}
-                              </div>
-                              <div className="text-xs text-muted-foreground mb-3">공백</div>
-                              <Progress value={question.videoFeedback.silence.score} className="h-1.5" />
+                              </span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-3">
+                            <Progress value={question.videoFeedback.silence.score} className="h-2 mb-3" />
+                            <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.silence.feedback}
                             </p>
                           </CardContent>
@@ -356,14 +351,14 @@ export default function Feedback() {
 
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
-                            <div className="text-center mb-2">
-                              <div className="text-2xl font-bold text-primary mb-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">말하기 속도</span>
+                              <span className="text-2xl font-bold text-primary">
                                 {question.videoFeedback.speed.wpm}
-                              </div>
-                              <div className="text-xs text-muted-foreground mb-3">말하기 속도 (WPM)</div>
-                              <Progress value={question.videoFeedback.speed.score} className="h-1.5" />
+                              </span>
                             </div>
-                            <p className="text-xs text-muted-foreground mt-3">
+                            <Progress value={question.videoFeedback.speed.score} className="h-2 mb-3" />
+                            <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.speed.feedback}
                             </p>
                           </CardContent>
@@ -372,59 +367,29 @@ export default function Feedback() {
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="audio" className="space-y-4">
-                    <div>
-                      <h3 className="font-semibold text-lg mb-4 flex items-center gap-2">
-                        <Mic className="h-5 w-5 text-primary" />
-                        텍스트 분석
-                      </h3>
+                  <TabsContent value="posture">
+                    <div className="grid md:grid-cols-2 gap-6">
+                      {/* 좌측: 동영상 */}
+                      <div className="bg-muted/30 rounded-lg aspect-video flex items-center justify-center">
+                        <Video className="h-12 w-12 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground ml-2">동영상 플레이어</p>
+                      </div>
                       
-                      <div className="grid md:grid-cols-2 gap-4">
+                      {/* 우측: 점수 */}
+                      <div className="space-y-4">
+                        <h3 className="font-semibold text-lg mb-4">자세 분석</h3>
+                        
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="font-medium">말 더듬</span>
-                              <div className="text-right">
-                                <div className="text-2xl font-bold text-primary">
-                                  {question.audioFeedback.stutter.score}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {question.audioFeedback.stutter.count}회 발생
-                                </div>
-                              </div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">어깨 기울기</span>
+                              <span className="text-2xl font-bold text-primary">
+                                {question.videoFeedback.shoulderTilt.score}
+                              </span>
                             </div>
-                            <Progress value={question.audioFeedback.stutter.score} className="h-2 mb-3" />
+                            <Progress value={question.videoFeedback.shoulderTilt.score} className="h-2 mb-3" />
                             <p className="text-sm text-muted-foreground">
-                              {question.audioFeedback.stutter.feedback}
-                            </p>
-                          </CardContent>
-                        </Card>
-
-                        <Card className="bg-muted/30">
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <span className="font-medium">반복 단어</span>
-                              <div className="text-right">
-                                <div className="text-2xl font-bold text-primary">
-                                  {question.audioFeedback.repeatWords.score}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {question.audioFeedback.repeatWords.count}회 발생
-                                </div>
-                              </div>
-                            </div>
-                            <Progress value={question.audioFeedback.repeatWords.score} className="h-2 mb-3" />
-                            <div className="mb-2">
-                              <div className="flex flex-wrap gap-2 mb-2">
-                                {question.audioFeedback.repeatWords.words.map((word, i) => (
-                                  <Badge key={i} variant="outline" className="text-xs">
-                                    {word}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {question.audioFeedback.repeatWords.feedback}
+                              {question.videoFeedback.shoulderTilt.feedback}
                             </p>
                           </CardContent>
                         </Card>
