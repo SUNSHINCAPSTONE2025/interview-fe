@@ -185,15 +185,9 @@ export default function Feedback() {
           {feedbackData.questions.map((question, index) => (
             <Card key={question.id} className="bg-gradient-card shadow-card">
               <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <Badge variant="outline" className="mb-3">질문 {index + 1}</Badge>
-                    <CardTitle className="text-lg">{question.prompt}</CardTitle>
-                  </div>
-                  <Button variant="outline" size="sm">
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    다시 시도
-                  </Button>
+                <div>
+                  <Badge variant="outline" className="mb-3">질문 {index + 1}</Badge>
+                  <CardTitle className="text-lg">{question.prompt}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
