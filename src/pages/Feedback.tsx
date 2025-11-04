@@ -32,53 +32,52 @@ export default function Feedback() {
         id: 1,
         prompt: "최근에 해결한 어려운 기술 문제에 대해 말씀해주세요.",
         transcript: "이전 회사 TechCorp에서 React 애플리케이션의 성능 문제로 로딩 시간이 느려지는 심각한 문제가 있었습니다...",
+        expressionScore: 75,
+        voiceScore: 82,
+        postureScore: 85,
         videoFeedback: {
-          // 자세
-          shoulderTilt: {
-            score: 85,
-            feedback: "어깨의 균형이 잘 유지되고 있습니다. 약간의 긴장이 보이지만 전반적으로 안정적인 자세입니다."
-          },
           // 표정
           gaze: {
-            score: 75,
+            count: 12,
             feedback: "카메라와의 시선 접촉이 양호하나, 가끔 시선이 아래로 향하는 경향이 있습니다."
           },
           blink: {
-            score: 80,
-            rate: 18,
-            feedback: "자연스러운 눈 깜빡임 빈도입니다. (분당 18회)"
+            count: 18,
+            feedback: "자연스러운 눈 깜빡임 빈도입니다."
           },
           smile: {
-            score: 70,
+            count: 8,
             feedback: "입꼬리가 자연스럽지만 좀 더 긍정적인 표정을 유지하면 좋겠습니다."
           },
           // 목소리
           voiceShake: {
-            score: 82,
+            value: "약간",
             feedback: "목소리 떨림이 거의 없이 안정적입니다."
           },
           silence: {
-            score: 88,
             totalSeconds: 3.2,
-            feedback: "불필요한 침묵이 거의 없습니다. (총 3.2초)"
+            feedback: "불필요한 침묵이 거의 없습니다."
+          },
+          intonation: {
+            value: "양호",
+            feedback: "억양 변화가 자연스럽습니다."
           },
           speed: {
-            score: 85,
             wpm: 160,
-            feedback: "적절한 말하기 속도를 유지하고 있습니다. (분당 160단어)"
-          }
-        },
-        audioFeedback: {
-          stutter: {
-            score: 78,
-            count: 8,
-            feedback: "약간의 말 더듬이 관찰되었습니다. (8회) 더 자연스럽게 말하기 위해 충분히 호흡하세요."
+            feedback: "적절한 말하기 속도를 유지하고 있습니다."
           },
-          repeatWords: {
-            score: 82,
-            words: ["그", "저기", "음"],
-            count: 12,
-            feedback: "반복 단어가 일부 나타났습니다. '그', '저기', '음'과 같은 불필요한 단어를 줄이세요."
+          // 자세
+          shoulderAlignment: {
+            value: "정렬됨",
+            feedback: "어깨의 균형이 잘 유지되고 있습니다."
+          },
+          headLevel: {
+            value: "수평",
+            feedback: "고개가 수평을 잘 유지하고 있습니다."
+          },
+          handPosition: {
+            value: "적절함",
+            feedback: "손의 위치가 자연스럽고 적절합니다."
           }
         }
       }
@@ -223,17 +222,26 @@ export default function Feedback() {
                       
                       {/* 우측: 점수 */}
                       <div className="space-y-4">
-                        <h3 className="font-semibold text-lg mb-4">표정 분석</h3>
+                        {/* 총 점수 */}
+                        <Card className="bg-primary/10 border-primary/20">
+                          <CardContent className="p-6">
+                            <div className="text-center">
+                              <p className="text-sm text-muted-foreground mb-2">표정 총 점수</p>
+                              <div className="text-5xl font-bold text-primary">{question.expressionScore}</div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <h3 className="font-semibold text-lg">세부 지표</h3>
                         
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium">시선</span>
-                              <span className="text-2xl font-bold text-primary">
-                                {question.videoFeedback.gaze.score}
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.gaze.count}회
                               </span>
                             </div>
-                            <Progress value={question.videoFeedback.gaze.score} className="h-2 mb-3" />
                             <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.gaze.feedback}
                             </p>
@@ -244,11 +252,10 @@ export default function Feedback() {
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium">눈 깜빡임</span>
-                              <span className="text-2xl font-bold text-primary">
-                                {question.videoFeedback.blink.score}
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.blink.count}회
                               </span>
                             </div>
-                            <Progress value={question.videoFeedback.blink.score} className="h-2 mb-3" />
                             <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.blink.feedback}
                             </p>
@@ -259,11 +266,10 @@ export default function Feedback() {
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium">입꼬리</span>
-                              <span className="text-2xl font-bold text-primary">
-                                {question.videoFeedback.smile.score}
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.smile.count}회
                               </span>
                             </div>
-                            <Progress value={question.videoFeedback.smile.score} className="h-2 mb-3" />
                             <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.smile.feedback}
                             </p>
@@ -283,17 +289,26 @@ export default function Feedback() {
                       
                       {/* 우측: 점수 */}
                       <div className="space-y-4">
-                        <h3 className="font-semibold text-lg mb-4">목소리 분석</h3>
+                        {/* 총 점수 */}
+                        <Card className="bg-primary/10 border-primary/20">
+                          <CardContent className="p-6">
+                            <div className="text-center">
+                              <p className="text-sm text-muted-foreground mb-2">목소리 총 점수</p>
+                              <div className="text-5xl font-bold text-primary">{question.voiceScore}</div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <h3 className="font-semibold text-lg">세부 지표</h3>
                         
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium">목소리 떨림</span>
-                              <span className="text-2xl font-bold text-primary">
-                                {question.videoFeedback.voiceShake.score}
+                              <span className="text-sm font-medium">떨림</span>
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.voiceShake.value}
                               </span>
                             </div>
-                            <Progress value={question.videoFeedback.voiceShake.score} className="h-2 mb-3" />
                             <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.voiceShake.feedback}
                             </p>
@@ -304,11 +319,10 @@ export default function Feedback() {
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-sm font-medium">공백</span>
-                              <span className="text-2xl font-bold text-primary">
-                                {question.videoFeedback.silence.score}
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.silence.totalSeconds}초
                               </span>
                             </div>
-                            <Progress value={question.videoFeedback.silence.score} className="h-2 mb-3" />
                             <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.silence.feedback}
                             </p>
@@ -318,12 +332,25 @@ export default function Feedback() {
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium">말하기 속도</span>
-                              <span className="text-2xl font-bold text-primary">
-                                {question.videoFeedback.speed.wpm}
+                              <span className="text-sm font-medium">억양</span>
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.intonation.value}
                               </span>
                             </div>
-                            <Progress value={question.videoFeedback.speed.score} className="h-2 mb-3" />
+                            <p className="text-sm text-muted-foreground">
+                              {question.videoFeedback.intonation.feedback}
+                            </p>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-muted/30">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">속도</span>
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.speed.wpm}wpm
+                              </span>
+                            </div>
                             <p className="text-sm text-muted-foreground">
                               {question.videoFeedback.speed.feedback}
                             </p>
@@ -343,19 +370,56 @@ export default function Feedback() {
                       
                       {/* 우측: 점수 */}
                       <div className="space-y-4">
-                        <h3 className="font-semibold text-lg mb-4">자세 분석</h3>
+                        {/* 총 점수 */}
+                        <Card className="bg-primary/10 border-primary/20">
+                          <CardContent className="p-6">
+                            <div className="text-center">
+                              <p className="text-sm text-muted-foreground mb-2">자세 총 점수</p>
+                              <div className="text-5xl font-bold text-primary">{question.postureScore}</div>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <h3 className="font-semibold text-lg">세부 지표</h3>
                         
                         <Card className="bg-muted/30">
                           <CardContent className="p-4">
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-sm font-medium">어깨 기울기</span>
-                              <span className="text-2xl font-bold text-primary">
-                                {question.videoFeedback.shoulderTilt.score}
+                              <span className="text-sm font-medium">어깨 정렬</span>
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.shoulderAlignment.value}
                               </span>
                             </div>
-                            <Progress value={question.videoFeedback.shoulderTilt.score} className="h-2 mb-3" />
                             <p className="text-sm text-muted-foreground">
-                              {question.videoFeedback.shoulderTilt.feedback}
+                              {question.videoFeedback.shoulderAlignment.feedback}
+                            </p>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-muted/30">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">고개 수평</span>
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.headLevel.value}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {question.videoFeedback.headLevel.feedback}
+                            </p>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-muted/30">
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-sm font-medium">손위치</span>
+                              <span className="text-xl font-bold text-primary">
+                                {question.videoFeedback.handPosition.value}
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {question.videoFeedback.handPosition.feedback}
                             </p>
                           </CardContent>
                         </Card>
