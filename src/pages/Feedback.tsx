@@ -180,40 +180,6 @@ export default function Feedback() {
           </Card>
         </div>
 
-        {/* Key Insights */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Card className="bg-success-light border-success/20">
-            <CardHeader>
-              <CardTitle className="text-success">강점</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {feedbackData.strengths.map((strength, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-success mt-2 flex-shrink-0" />
-                    {strength}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-warning-light border-warning/20">
-            <CardHeader>
-              <CardTitle className="text-warning">개선 영역</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {feedbackData.improvements.map((improvement, i) => (
-                  <li key={i} className="flex items-start gap-2 text-sm">
-                    <div className="w-1.5 h-1.5 rounded-full bg-warning mt-2 flex-shrink-0" />
-                    {improvement}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
 
         {/* Detailed Feedback per Question */}
         <div className="space-y-6">
