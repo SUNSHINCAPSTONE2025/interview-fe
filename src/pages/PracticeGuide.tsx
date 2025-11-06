@@ -23,8 +23,7 @@ export default function PracticeGuide() {
     totalQuestions: 15,
     practiceTypes: {
       "technical": "기술 질문 (8개)",
-      "behavioral": "행동 질문 (7개)", 
-      "both": "전체 면접 (15개)"
+      "behavioral": "소프트 질문 (7개)"
     }
   };
 
