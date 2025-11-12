@@ -24,7 +24,6 @@ export default function NewSession() {
     company: "",
     role: "",
     interviewDate: "",
-    jobCategory: "",
     jobDescription: "",
     companyValues: "",
     // Presentation fields
@@ -181,32 +180,6 @@ export default function NewSession() {
                     value={formData.interviewDate}
                     onChange={(e) => setFormData({...formData, interviewDate: e.target.value})}
                   />
-                </div>
-
-                <div>
-                  <Label>직무 카테고리</Label>
-                  <RadioGroup 
-                    value={formData.jobCategory} 
-                    onValueChange={(value) => setFormData({...formData, jobCategory: value})}
-                    className="mt-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="technical" id="technical" />
-                      <Label htmlFor="technical">기술직</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="product" id="product" />
-                      <Label htmlFor="product">제품</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="design" id="design" />
-                      <Label htmlFor="design">디자인</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="business" id="business" />
-                      <Label htmlFor="business">비즈니스</Label>
-                    </div>
-                  </RadioGroup>
                 </div>
 
                 <div>
@@ -377,7 +350,6 @@ export default function NewSession() {
                         <p><strong>면접 날짜:</strong> {formData.interviewDate}</p>
                       )}
                       <p><strong>질문:</strong> {qaItems.length}개 준비됨</p>
-                      <p><strong>카테고리:</strong> {formData.jobCategory || "지정되지 않음"}</p>
                     </div>
                   ) : (
                     <div className="space-y-2 text-sm">
