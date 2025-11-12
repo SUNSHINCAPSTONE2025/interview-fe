@@ -194,7 +194,7 @@ export default function NewSession() {
                 </div>
 
                 <div>
-                  <Label>이력서 Q&A *</Label>
+                  <Label>자기소개서 *</Label>
                   <p className="text-sm text-muted-foreground mb-4">
                     본인의 배경과 경험에 대한 질문과 답변을 추가하세요.
                   </p>
