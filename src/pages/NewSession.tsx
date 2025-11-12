@@ -183,6 +183,17 @@ export default function NewSession() {
                 </div>
 
                 <div>
+                  <Label htmlFor="jobDescription">직무 설명</Label>
+                  <Textarea
+                    id="jobDescription"
+                    value={formData.jobDescription}
+                    onChange={(e) => setFormData({...formData, jobDescription: e.target.value})}
+                    placeholder="직무 설명을 여기에 붙여넣으세요..."
+                    rows={4}
+                  />
+                </div>
+
+                <div>
                   <Label>이력서 Q&A *</Label>
                   <p className="text-sm text-muted-foreground mb-4">
                     본인의 배경과 경험에 대한 질문과 답변을 추가하세요.
@@ -218,17 +229,6 @@ export default function NewSession() {
                     <Plus className="h-4 w-4 mr-2" />
                     질문 추가
                   </Button>
-                </div>
-
-                <div>
-                  <Label htmlFor="jobDescription">직무 설명</Label>
-                  <Textarea
-                    id="jobDescription"
-                    value={formData.jobDescription}
-                    onChange={(e) => setFormData({...formData, jobDescription: e.target.value})}
-                    placeholder="직무 설명을 여기에 붙여넣으세요..."
-                    rows={4}
-                  />
                 </div>
 
                 <div className="flex justify-between">
