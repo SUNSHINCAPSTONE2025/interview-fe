@@ -40,9 +40,19 @@ const mockContents: ContentListResponse = [
 export const contentsApi = {
   getAll: async (): Promise<ContentListResponse> => {
 
+    // 🚧 개발용: Mock 데이터 반환
+    // TODO: 백엔드 연결되면 아래 주석 해제하고 Mock 데이터 삭제
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        resolve(mockContents);
+      }, 500); // 0.5초 딜레이로 로딩 상태 시뮬레이션
+    });
+
+    /*
     return apiRequest<ContentListResponse>("/api/contents", {
       method: "GET",
     });
+    */
   
   },
 };

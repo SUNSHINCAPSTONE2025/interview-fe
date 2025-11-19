@@ -21,6 +21,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // 🚧 개발용 Mock User (백엔드 연결 전 임시)
+    // TODO: 백엔드 연결되면 이 부분 삭제하고 아래 주석 해제
+    const mockUser: User = {
+      id: "mock-user-123",
+      name: "테스트 사용자",
+      email: "test@example.com",
+      email_verified: true,
+    };
+    setUser(mockUser);
+    setIsLoading(false);
+    return; // 여기서 리턴해서 아래 코드 실행 안 함
+
+    // ✅ 백엔드 연결되면 위 Mock User 부분 삭제하고 아래 주석 해제
+    /*
     const token = localStorage.getItem("access_token");
     const storedUser = localStorage.getItem("user");
 
@@ -34,6 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     setIsLoading(false);
+    */
   }, []);
 
   const login = async (data: LoginRequest) => {
