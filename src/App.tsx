@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { Header } from "./components/layout/Header";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import NewSession from "./pages/NewSession";
 import SessionDetail from "./pages/SessionDetail";
@@ -18,24 +20,26 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Header />
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/new" element={<NewSession />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/session/:id" element={<SessionDetail />} />
-          <Route path="/practice/:id" element={<PracticeGuide />} />
-          <Route path="/practice/:id/setup" element={<PracticeSetup />} />
-          <Route path="/practice/:id/run" element={<PracticeRoom />} />
-          <Route path="/feedback/:id" element={<Feedback />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Header />
+          <Routes>
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/new" element={<ProtectedRoute><NewSession /></ProtectedRoute>} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/session/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
+            <Route path="/practice/:id" element={<ProtectedRoute><PracticeGuide /></ProtectedRoute>} />
+            <Route path="/practice/:id/setup" element={<ProtectedRoute><PracticeSetup /></ProtectedRoute>} />
+            <Route path="/practice/:id/run" element={<ProtectedRoute><PracticeRoom /></ProtectedRoute>} />
+            <Route path="/feedback/:id" element={<ProtectedRoute><Feedback /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

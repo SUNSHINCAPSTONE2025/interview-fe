@@ -4,24 +4,47 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Auth() {
+  const navigate = useNavigate();
+  const { login, signup } = useAuth();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // UI only - no actual authentication
-    console.log("Login attempt:", { email, password });
+    setIsLoading(true);
+
+    try {
+      await login({ email, password });
+      navigate("/");
+    } catch (error) {
+      console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    // UI only - no actual authentication
-    console.log("Signup attempt:", { name, email, password });
+    setIsLoading(true);
+
+    try {
+      await signup({ name, email, password });
+      setEmail("");
+      setPassword("");
+      setName("");
+    } catch (error) {
+      console.error("Signup error:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -75,11 +98,12 @@ export default function Auth() {
                       required
                     />
                   </div>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full shadow-button hover:shadow-hover transition-all"
+                    disabled={isLoading}
                   >
-                    로그인
+                    {isLoading ? "로그인 중..." : "로그인"}
                   </Button>
                 </form>
               </TabsContent>
@@ -119,11 +143,12 @@ export default function Auth() {
                       required
                     />
                   </div>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full shadow-button hover:shadow-hover transition-all"
+                    disabled={isLoading}
                   >
-                    회원가입
+                    {isLoading ? "처리 중..." : "회원가입"}
                   </Button>
                 </form>
               </TabsContent>
