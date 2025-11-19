@@ -1,5 +1,11 @@
 import { apiRequest } from "@/lib/api";
-import type { ContentListResponse } from "@/types/content";
+import type {
+  ContentListResponse,
+  CreateContentRequest,
+  CreateContentResponse,
+  CreateResumeRequest,
+  CreateResumeResponse
+} from "@/types/content";
 
 // 🚧 개발용 Mock 데이터 (백엔드 연결 전 임시)
 const mockContents: ContentListResponse = [
@@ -38,6 +44,7 @@ const mockContents: ContentListResponse = [
 ];
 
 export const contentsApi = {
+  // Content 목록 조회
   getAll: async (): Promise<ContentListResponse> => {
 
     // 🚧 개발용: Mock 데이터 반환
@@ -53,6 +60,22 @@ export const contentsApi = {
       method: "GET",
     });
     */
-  
+
+  },
+
+  // Content 생성
+  create: async (data: CreateContentRequest): Promise<CreateContentResponse> => {
+    return apiRequest<CreateContentResponse>("/api/contents", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // Resume 생성 (자소서 Q&A 등록)
+  createResume: async (data: CreateResumeRequest): Promise<CreateResumeResponse> => {
+    return apiRequest<CreateResumeResponse>("/api/resumes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
   },
 };
