@@ -4,7 +4,9 @@ import type {
   CreateContentRequest,
   CreateContentResponse,
   CreateResumeRequest,
-  CreateResumeResponse
+  CreateResumeResponse,
+  GenerateInterviewQuestionsRequest,
+  GenerateInterviewQuestionsResponse
 } from "@/types/content";
 
 // 🚧 개발용 Mock 데이터 (백엔드 연결 전 임시)
@@ -74,6 +76,14 @@ export const contentsApi = {
   // Resume 생성 (자소서 Q&A 등록)
   createResume: async (data: CreateResumeRequest): Promise<CreateResumeResponse> => {
     return apiRequest<CreateResumeResponse>("/api/resumes", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  // 자소서 기반 면접 질문 생성
+  generateInterviewQuestions: async (data: GenerateInterviewQuestionsRequest): Promise<GenerateInterviewQuestionsResponse> => {
+    return apiRequest<GenerateInterviewQuestionsResponse>("/api/interviews/question", {
       method: "POST",
       body: JSON.stringify(data),
     });

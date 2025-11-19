@@ -117,9 +117,24 @@ export default function NewSession() {
         const resumeResponse = await contentsApi.createResume(resumeData);
 
         toast.success(`자기소개서 ${resumeResponse.created_count}개 항목이 등록되었습니다!`);
+
+        // 3. 자소서 기반 면접 질문 생성
+        const generateQuestionsData = {
+          qas: validQAItems.map(item => ({
+            q: item.question,
+            a: item.answer,
+          })),
+          emit_confidence: true,  // 고정값
+          use_seed: false,        // 고정값
+          top_k_seed: 0,          // 고정값
+        };
+
+        const questionsResponse = await contentsApi.generateInterviewQuestions(generateQuestionsData);
+
+        toast.success("면접 질문이 생성되었습니다!");
       }
 
-      // 3. 생성된 세션 상세 페이지로 이동
+      // 4. 생성된 세션 상세 페이지로 이동
       toast.success("면접 준비가 완료되었습니다!");
       navigate(`/session/${contentResponse.id}`);
 
