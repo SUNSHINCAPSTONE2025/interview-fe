@@ -27,7 +27,7 @@ const App = () => (
         <BrowserRouter>
           <Header />
           <Routes>
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/new" element={<ProtectedRoute><NewSession /></ProtectedRoute>} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/session/:id" element={<ProtectedRoute><SessionDetail /></ProtectedRoute>} />
