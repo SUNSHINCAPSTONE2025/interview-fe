@@ -67,7 +67,7 @@ export const contentsApi = {
 
   // Content 생성
   create: async (data: CreateContentRequest): Promise<CreateContentResponse> => {
-    return apiRequest<CreateContentResponse>("/api/contents", {
+    return apiRequest<CreateContentResponse>("/api/interviews/contents", {
       method: "POST",
       body: JSON.stringify(data),
     });
@@ -75,7 +75,7 @@ export const contentsApi = {
 
   // Resume 생성 (자소서 Q&A 등록)
   createResume: async (data: CreateResumeRequest): Promise<CreateResumeResponse> => {
-    return apiRequest<CreateResumeResponse>("/api/resumes", {
+    return apiRequest<CreateResumeResponse>("/api/interviews/resumes", {
       method: "POST",
       body: JSON.stringify(data),
     });
