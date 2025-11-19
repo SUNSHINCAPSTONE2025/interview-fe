@@ -3,24 +3,34 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Camera, 
-  Mic, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Camera,
+  Mic,
+  CheckCircle2,
+  XCircle,
   AlertCircle,
   ArrowLeft,
-  Play
+  Play,
+  Loader2
 } from "lucide-react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { sessionsApi } from "@/api/sessions";
+import { useToast } from "@/hooks/use-toast";
+import type { PracticeType } from "@/types/session";
 
 export default function PracticeSetup() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+
   const [cameraPermission, setCameraPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [micPermission, setMicPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [acknowledged, setAcknowledged] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+
+  // Get practice type from URL params
+  const practiceType = searchParams.get("type") as PracticeType;
 
   const checkCameraPermission = async () => {
     try {
@@ -42,10 +52,49 @@ export default function PracticeSetup() {
     }
   };
 
-  const allChecksComplete = 
-    cameraPermission === 'granted' && 
-    micPermission === 'granted' && 
+  const allChecksComplete =
+    cameraPermission === 'granted' &&
+    micPermission === 'granted' &&
     acknowledged;
+
+  // Handle interview start - create session and navigate
+  const handleStartInterview = async () => {
+    if (!id || !practiceType) {
+      toast({
+        title: "오류",
+        description: "면접 정보가 올바르지 않습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreatingSession(true);
+
+    try {
+      const contentId = parseInt(id);
+      const response = await sessionsApi.create(contentId, {
+        question_type: practiceType,
+        question_count: 5, // 5개 고정
+      });
+
+      // 세션 생성 성공 - 생성된 세션 ID로 면접 시작
+      toast({
+        title: "면접 세션 생성 완료",
+        description: `${response.question_count}개의 질문으로 면접을 시작합니다.`,
+      });
+
+      // 생성된 세션 ID를 가지고 면접 실행 페이지로 이동
+      navigate(`/practice/${id}/run?session_id=${response.session_id}`);
+    } catch (error) {
+      console.error("Failed to create session:", error);
+      toast({
+        title: "세션 생성 실패",
+        description: "면접 세션을 생성하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      });
+      setIsCreatingSession(false);
+    }
+  };
 
   const notices = [
     {
@@ -219,15 +268,24 @@ export default function PracticeSetup() {
                     모든 항목을 확인해주세요
                   </Badge>
                 )}
-                <Button 
+                <Button
                   variant="hero"
                   size="lg"
-                  disabled={!allChecksComplete}
-                  onClick={() => navigate(`/practice/${id}/run`)}
+                  disabled={!allChecksComplete || isCreatingSession}
+                  onClick={handleStartInterview}
                   className="shadow-hover"
                 >
-                  <Play className="h-5 w-5 mr-2" />
-                  면접 시작
+                  {isCreatingSession ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      세션 생성 중...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-5 w-5 mr-2" />
+                      면접 시작
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

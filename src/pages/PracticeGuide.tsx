@@ -132,7 +132,7 @@ export default function PracticeGuide() {
                 </Button>
                 <Button
                   variant="hero"
-                  onClick={() => navigate(`/practice/${id}/setup`)}
+                  onClick={() => navigate(`/practice/${id}/setup?type=${practiceType}`)}
                   className="shadow-hover"
                 >
                   <Play className="h-5 w-5 mr-2" />
