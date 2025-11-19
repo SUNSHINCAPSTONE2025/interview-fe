@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ArrowLeft, ArrowRight, Briefcase, Presentation, Calendar, Plus, Minus } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 type SessionMode = "Interview" | "Presentation" | null;
 
@@ -17,6 +18,7 @@ interface QAItem {
 
 export default function NewSession() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<SessionMode>(null);
   const [formData, setFormData] = useState({
@@ -115,12 +117,13 @@ export default function NewSession() {
                   </button>
                   
                   <button
-                    onClick={() => setMode("Presentation")}
-                    className={`p-6 rounded-lg border-2 transition-all duration-300 text-left ${
-                      mode === "Presentation" 
-                        ? "border-primary bg-primary/5 shadow-button" 
-                        : "border-border hover:border-primary/50 hover:bg-accent/50"
-                    }`}
+                    onClick={() => {
+                      toast({
+                        title: "준비 중입니다",
+                        description: "업데이트를 기대해주세요!",
+                      });
+                    }}
+                    className="p-6 rounded-lg border-2 border-border hover:border-primary/50 hover:bg-accent/50 transition-all duration-300 text-left opacity-60 cursor-not-allowed"
                   >
                     <Presentation className="h-8 w-8 text-primary mb-4" />
                     <h3 className="font-semibold text-lg mb-2">발표 연습</h3>
