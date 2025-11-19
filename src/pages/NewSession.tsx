@@ -5,8 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { ArrowLeft, ArrowRight, Briefcase, Presentation, Calendar, Plus, Minus } from "lucide-react";
+import { ArrowLeft, ArrowRight, Briefcase, Presentation, Calendar, Plus, Minus, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { contentsApi } from "@/api/contents";
+import { toast } from "sonner";
+import { ApiError } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
 type SessionMode = "Interview" | "Presentation" | null;
@@ -21,6 +24,7 @@ export default function NewSession() {
   const { toast } = useToast();
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<SessionMode>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     // Interview fields
     company: "",
@@ -38,6 +42,10 @@ export default function NewSession() {
   const [qaItems, setQAItems] = useState<QAItem[]>([{ question: "", answer: "" }]);
 
   const addQAItem = () => {
+    if (qaItems.length >= 5) {
+      toast.error("자기소개서는 최대 5개까지 추가할 수 있습니다.");
+      return;
+    }
     setQAItems([...qaItems, { question: "", answer: "" }]);
   };
 
@@ -62,10 +70,100 @@ export default function NewSession() {
     if (step > 1) setStep(step - 1);
   };
 
-  const handleCreate = () => {
-    // Here you would normally save the session
-    console.log("Creating session:", { mode, formData, qaItems });
-    navigate("/");
+  const handleCreate = async () => {
+    if (mode !== "Interview") {
+      toast.error("현재 면접 모드만 지원됩니다.");
+      return;
+    }
+
+    // 필수 항목 검증
+    if (!formData.company.trim() || !formData.role.trim()) {
+      toast.error("회사명과 직무는 필수 항목입니다.");
+      return;
+    }
+
+    // 자소서 항목 검증 (최소 1개의 질문/답변이 있어야 함)
+    const validQAItems = qaItems.filter(
+      item => item.question.trim() && item.answer.trim()
+    );
+
+    if (validQAItems.length === 0) {
+      toast.error("최소 1개의 자기소개서 질문과 답변을 작성해주세요.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // 1. Content 생성
+      const contentData = {
+        company: formData.company.trim(),
+        role: formData.role.trim(),
+        interview_date: formData.interviewDate || null,
+        jd_text: formData.jobDescription.trim() || null,
+        role_category: null, // TODO: 필요시 직무 카테고리 선택 UI 추가
+      };
+
+      const contentResponse = await contentsApi.create(contentData);
+
+      toast.success("면접 정보가 등록되었습니다!");
+
+      // 2. Resume 생성 (자소서 Q&A)
+      if (validQAItems.length > 0) {
+        const resumeData = {
+          content_id: contentResponse.id,
+          version: 1, // 첫 버전
+          items: validQAItems,
+        };
+
+        const resumeResponse = await contentsApi.createResume(resumeData);
+
+        toast.success(`자기소개서 ${resumeResponse.created_count}개 항목이 등록되었습니다!`);
+
+        // 3. 자소서 기반 면접 질문 생성
+        const generateQuestionsData = {
+          qas: validQAItems.map(item => ({
+            q: item.question,
+            a: item.answer,
+          })),
+          emit_confidence: true,  // 고정값
+          use_seed: false,        // 고정값
+          top_k_seed: 0,          // 고정값
+        };
+
+        const questionsResponse = await contentsApi.generateInterviewQuestions(generateQuestionsData);
+
+        toast.success("면접 질문이 생성되었습니다!");
+      }
+
+      // 4. 생성된 세션 상세 페이지로 이동
+      toast.success("면접 준비가 완료되었습니다!");
+      navigate(`/session/${contentResponse.id}`);
+
+    } catch (error) {
+      console.error("Failed to create session:", error);
+
+      if (error instanceof ApiError) {
+        switch (error.status) {
+          case 400:
+            toast.error("입력 정보를 확인해주세요.");
+            break;
+          case 401:
+            toast.error("로그인이 필요합니다.");
+            navigate("/auth");
+            break;
+          case 500:
+            toast.error("서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+            break;
+          default:
+            toast.error("면접 정보 등록에 실패했습니다.");
+        }
+      } else {
+        toast.error("네트워크 오류가 발생했습니다.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -199,7 +297,7 @@ export default function NewSession() {
                 <div>
                   <Label>자기소개서 *</Label>
                   <p className="text-sm text-muted-foreground mb-4">
-                    본인의 배경과 경험에 대한 질문과 답변을 추가하세요.
+                    본인의 배경과 경험에 대한 질문과 답변을 추가하세요. (최대 5개)
                   </p>
                   {qaItems.map((item, index) => (
                     <div key={index} className="space-y-2 p-4 border border-border rounded-lg mb-4">
@@ -228,9 +326,14 @@ export default function NewSession() {
                       />
                     </div>
                   ))}
-                  <Button variant="outline" onClick={addQAItem} className="w-full">
+                  <Button
+                    variant="outline"
+                    onClick={addQAItem}
+                    className="w-full"
+                    disabled={qaItems.length >= 5}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
-                    질문 추가
+                    질문 추가 {qaItems.length >= 5 && "(최대 5개)"}
                   </Button>
                 </div>
 
@@ -367,12 +470,19 @@ export default function NewSession() {
                 </div>
 
                 <div className="flex justify-between">
-                  <Button variant="outline" onClick={handlePrev}>
+                  <Button variant="outline" onClick={handlePrev} disabled={isSubmitting}>
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     뒤로
                   </Button>
-                  <Button onClick={handleCreate} variant="success">
-                    세션 만들기
+                  <Button onClick={handleCreate} variant="success" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        등록 중...
+                      </>
+                    ) : (
+                      "세션 만들기"
+                    )}
                   </Button>
                 </div>
               </CardContent>
