@@ -3,29 +3,26 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Camera, 
-  CameraOff, 
-  Mic, 
-  MicOff, 
-  Play, 
-  Square, 
+import {
+  Camera,
+  Play,
+  Square,
   ChevronRight,
-  AlertCircle 
+  AlertCircle,
+  Brain
 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 
 export default function PracticeRoom() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
+  const [isThinking, setIsThinking] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [countdown, setCountdown] = useState(5);
+  const [thinkingTime, setThinkingTime] = useState(60);
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(60);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [showCountdown, setShowCountdown] = useState(false);
+  const [recordingEnded, setRecordingEnded] = useState(false);
 
   const questions = [
     {
@@ -47,39 +44,52 @@ export default function PracticeRoom() {
 
   const totalQuestions = questions.length;
 
+  // Thinking time countdown (60초)
   useEffect(() => {
-    if (showCountdown && countdown > 0) {
-      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    if (isThinking && thinkingTime > 0) {
+      const timer = setTimeout(() => setThinkingTime(thinkingTime - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (showCountdown && countdown === 0) {
-      setShowCountdown(false);
+    } else if (isThinking && thinkingTime === 0) {
+      // 생각 시간 종료 -> 자동으로 녹화 시작
+      setIsThinking(false);
       setIsRecording(true);
+      setTimeRemaining(60);
     }
-  }, [countdown, showCountdown]);
+  }, [isThinking, thinkingTime]);
 
+  // Recording time countdown (60초)
   useEffect(() => {
-    if (isRecording && timeRemaining > 0) {
+    if (isRecording && !recordingEnded && timeRemaining > 0) {
       const timer = setTimeout(() => setTimeRemaining(timeRemaining - 1), 1000);
       return () => clearTimeout(timer);
-    } else if (isRecording && timeRemaining === 0) {
-      handleNext();
+    } else if (isRecording && !recordingEnded && timeRemaining === 0) {
+      // 녹화 시간 종료 -> 자동으로 다음 질문으로 넘어가지 않고 버튼 표시
+      setIsRecording(false);
+      setRecordingEnded(true);
     }
-  }, [isRecording, timeRemaining]);
+  }, [isRecording, recordingEnded, timeRemaining]);
 
   const handleStart = () => {
-    setShowCountdown(true);
-    setCountdown(5);
+    setIsThinking(true);
+    setThinkingTime(60);
+    setRecordingEnded(false);
+  };
+
+  const handleEndAnswer = () => {
+    // 대답 종료 버튼 클릭
+    setIsRecording(false);
+    setRecordingEnded(true);
   };
 
   const handleNext = () => {
-    setIsRecording(false);
+    // 다음 질문으로 이동
     if (currentQuestion < totalQuestions - 1) {
-      setTimeout(() => {
-        setCurrentQuestion(currentQuestion + 1);
-        setTimeRemaining(60);
-        setShowCountdown(true);
-        setCountdown(5);
-      }, 2000);
+      setCurrentQuestion(currentQuestion + 1);
+      setIsThinking(false);
+      setIsRecording(false);
+      setRecordingEnded(false);
+      setThinkingTime(60);
+      setTimeRemaining(60);
     } else {
       // Practice completed
       navigate(`/feedback/${id}?attempt=new`);
@@ -110,6 +120,12 @@ export default function PracticeRoom() {
           </div>
           
           <div className="flex items-center gap-3">
+            {isThinking && (
+              <Badge variant="secondary" className="animate-pulse">
+                <Brain className="h-3 w-3 mr-2" />
+                생각 시간
+              </Badge>
+            )}
             {isRecording && (
               <Badge variant="destructive" className="animate-pulse">
                 <div className="w-2 h-2 rounded-full bg-white mr-2" />
@@ -151,14 +167,21 @@ export default function PracticeRoom() {
                 </ul>
               </div>
 
-              {!isRecording && !showCountdown && (
+              {!isThinking && !isRecording && !recordingEnded && (
                 <Button onClick={handleStart} className="w-full" variant="hero">
                   <Play className="h-4 w-4 mr-2" />
-                  녹화 시작
+                  시작하기
                 </Button>
               )}
 
               {isRecording && (
+                <Button onClick={handleEndAnswer} className="w-full" variant="destructive">
+                  <Square className="h-4 w-4 mr-2" />
+                  대답 종료
+                </Button>
+              )}
+
+              {recordingEnded && (
                 <Button onClick={handleNext} className="w-full" variant="success">
                   다음 질문
                   <ChevronRight className="h-4 w-4 ml-2" />
@@ -169,39 +192,34 @@ export default function PracticeRoom() {
 
           {/* Right Panel - Video */}
           <Card className="lg:col-span-2 bg-black shadow-hover overflow-hidden relative aspect-video">
-            {/* Countdown Overlay */}
-            {showCountdown && countdown > 0 && (
+            {/* Thinking Time Overlay */}
+            {isThinking && (
               <div className="absolute inset-0 bg-black/80 flex items-center justify-center z-10">
                 <div className="text-center">
-                  <div className="text-8xl font-bold text-white mb-4 animate-pulse">
-                    {countdown}
+                  <Brain className="h-24 w-24 text-blue-400 mx-auto mb-6 animate-pulse" />
+                  <div className="text-6xl font-bold text-white mb-4">
+                    {formatTime(thinkingTime)}
                   </div>
-                  <p className="text-white text-lg">준비하세요...</p>
+                  <p className="text-white text-xl mb-2">생각 시간</p>
+                  <p className="text-white/60 text-sm">답변을 준비하세요</p>
                 </div>
               </div>
             )}
 
             {/* Camera Preview */}
             <div className="absolute inset-0 flex items-center justify-center">
-              {cameraEnabled ? (
-                <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                  <Camera className="h-24 w-24 text-slate-600" />
-                  <div className="absolute bottom-4 left-4 text-white/60 text-sm">
-                    카메라 미리보기가 여기에 표시됩니다
-                  </div>
+              <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                <Camera className="h-24 w-24 text-slate-600" />
+                <div className="absolute bottom-4 left-4 text-white/60 text-sm">
+                  카메라 미리보기가 여기에 표시됩니다
                 </div>
-              ) : (
-                <div className="text-white/60">
-                  <CameraOff className="h-24 w-24 mx-auto mb-4" />
-                  <p>카메라 비활성화</p>
-                </div>
-              )}
+              </div>
             </div>
 
             {/* Timer Overlay */}
             {isRecording && (
               <div className="absolute top-4 right-4 z-10">
-                <Badge 
+                <Badge
                   variant={timeRemaining < 10 ? "destructive" : "default"}
                   className="text-lg px-4 py-2"
                 >
@@ -210,27 +228,17 @@ export default function PracticeRoom() {
               </div>
             )}
 
-            {/* Controls Bar */}
-            <div className="absolute bottom-0 left-0 right-0 bg-black/80 backdrop-blur-sm p-4">
-              <div className="flex items-center justify-center gap-4">
-                <Button
-                  variant={cameraEnabled ? "default" : "destructive"}
-                  size="icon"
-                  className="rounded-full"
-                  onClick={() => setCameraEnabled(!cameraEnabled)}
-                >
-                  {cameraEnabled ? <Camera className="h-5 w-5" /> : <CameraOff className="h-5 w-5" />}
-                </Button>
-                <Button
-                  variant={micEnabled ? "default" : "destructive"}
-                  size="icon"
-                  className="rounded-full"
-                  onClick={() => setMicEnabled(!micEnabled)}
-                >
-                  {micEnabled ? <Mic className="h-5 w-5" /> : <MicOff className="h-5 w-5" />}
-                </Button>
+            {/* Recording Ended Message */}
+            {recordingEnded && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center z-10">
+                <div className="text-center">
+                  <div className="text-white text-2xl font-semibold mb-2">
+                    답변이 완료되었습니다
+                  </div>
+                  <p className="text-white/60">다음 질문으로 이동하세요</p>
+                </div>
               </div>
-            </div>
+            )}
           </Card>
         </div>
       </div>
