@@ -103,27 +103,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Quick Stats */}
-        {mockSessions.length > 0 && (
-          <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center p-6 bg-gradient-card rounded-lg shadow-card">
-              <div className="text-3xl font-bold text-primary mb-2">{mockSessions.length}</div>
-              <div className="text-muted-foreground">활성 세션</div>
-            </div>
-            <div className="text-center p-6 bg-gradient-card rounded-lg shadow-card">
-              <div className="text-3xl font-bold text-success mb-2">
-                {mockSessions.reduce((acc, session) => acc + session.completedSessions, 0)}
-              </div>
-              <div className="text-muted-foreground">총 연습 횟수</div>
-            </div>
-            <div className="text-center p-6 bg-gradient-card rounded-lg shadow-card">
-              <div className="text-3xl font-bold text-warning mb-2">
-                {Math.round(mockSessions.reduce((acc, session) => acc + session.progress, 0) / mockSessions.length)}%
-              </div>
-              <div className="text-muted-foreground">평균 진행률</div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
