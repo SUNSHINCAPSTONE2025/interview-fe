@@ -64,16 +64,14 @@ export default function SessionDetail() {
           </Button>
         </div>
 
-        <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto">
-            <TabsTrigger value="overview">개요</TabsTrigger>
-            <TabsTrigger value="data">입력 데이터</TabsTrigger>
-            <TabsTrigger value="plan">계획</TabsTrigger>
+        <Tabs defaultValue="history" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 lg:w-auto">
             <TabsTrigger value="history">기록</TabsTrigger>
+            <TabsTrigger value="info">면접정보</TabsTrigger>
           </TabsList>
 
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
+          {/* History Tab */}
+          <TabsContent value="history" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Progress Card */}
               <Card className="bg-gradient-card shadow-card">
@@ -132,62 +130,38 @@ export default function SessionDetail() {
               </Card>
             </div>
 
-            {/* Recommended Practice */}
-            <Card className="bg-gradient-primary text-primary-foreground shadow-hover">
-              <CardHeader>
-                <CardTitle>오늘의 추천 연습</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p>진행 상황을 고려할 때, 오늘은 행동 질문에 집중하는 것을 추천합니다.</p>
-                <div className="flex items-center gap-4 text-sm opacity-90">
-                  <span className="flex items-center gap-1">
-                    <Timer className="h-4 w-4" />
-                    ~35분
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MessageSquare className="h-4 w-4" />
-                    7개 질문
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Recent Feedback Highlights */}
+            {/* Practice History */}
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
-                <CardTitle>최근 피드백 하이라이트</CardTitle>
+                <CardTitle>연습 기록</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-semibold text-sm mb-3 text-success">강점</h4>
-                    <ul className="space-y-2">
-                      {session.lastFeedback.strengths.map((strength, i) => (
-                        <li key={i} className="text-sm flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-success mt-2" />
-                          {strength}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm mb-3 text-warning">개선 영역</h4>
-                    <ul className="space-y-2">
-                      {session.lastFeedback.improvements.map((improvement, i) => (
-                        <li key={i} className="text-sm flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-warning mt-2" />
-                          {improvement}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                <div className="space-y-3">
+                  {session.history.map((record, index) => (
+                    <Link 
+                      key={index}
+                      to={`/feedback/${id}?attempt=${index}`}
+                      className="block p-4 rounded-lg border border-border hover:bg-accent/50 hover:shadow-card transition-all"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{record.type} 연습</p>
+                          <p className="text-sm text-muted-foreground">{record.date} • {record.duration}</p>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-bold">{record.score}</div>
+                          <p className="text-xs text-muted-foreground">점수</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Input Data Tab */}
-          <TabsContent value="data">
+          {/* Interview Info Tab */}
+          <TabsContent value="info">
             <Card className="bg-gradient-card shadow-card">
               <CardHeader>
                 <CardTitle>세션 정보</CardTitle>
@@ -213,7 +187,7 @@ export default function SessionDetail() {
                 </div>
 
                 <div>
-                  <Label className="text-sm font-medium mb-3 block">이력서 Q&A</Label>
+                  <Label className="text-sm font-medium mb-3 block">자기소개서</Label>
                   <div className="space-y-4">
                     {session.qaItems.map((item, index) => (
                       <div key={index} className="p-4 bg-muted/50 rounded-lg">
@@ -229,72 +203,6 @@ export default function SessionDetail() {
             </Card>
           </TabsContent>
 
-          {/* Plan Tab */}
-          <TabsContent value="plan">
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="h-5 w-5" />
-                  연습 로드맵
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  면접까지 추천되는 일정
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <div key={i} className={`p-4 rounded-lg border-2 ${
-                      i === 0 ? "border-primary bg-primary/5" : "border-border"
-                    }`}>
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{i + 1}주차 목표</p>
-                          <p className="text-sm text-muted-foreground">
-                            {i === 0 ? "현재 주" : `${(i * 7)}일 후`}
-                          </p>
-                        </div>
-                        <Badge variant={i === 0 ? "default" : "outline"}>
-                          {i < 2 ? "진행 중" : "예정"}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* History Tab */}
-          <TabsContent value="history">
-            <Card className="bg-gradient-card shadow-card">
-              <CardHeader>
-                <CardTitle>연습 기록</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {session.history.map((record, index) => (
-                    <Link 
-                      key={index}
-                      to={`/feedback/${id}?attempt=${index}`}
-                      className="block p-4 rounded-lg border border-border hover:bg-accent/50 hover:shadow-card transition-all"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{record.type} 연습</p>
-                          <p className="text-sm text-muted-foreground">{record.date} • {record.duration}</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold">{record.score}</div>
-                          <Eye className="h-4 w-4 ml-auto text-muted-foreground" />
-                        </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
       </div>
     </div>
