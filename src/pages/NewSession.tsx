@@ -40,6 +40,10 @@ export default function NewSession() {
   const [qaItems, setQAItems] = useState<QAItem[]>([{ question: "", answer: "" }]);
 
   const addQAItem = () => {
+    if (qaItems.length >= 5) {
+      toast.error("자기소개서는 최대 5개까지 추가할 수 있습니다.");
+      return;
+    }
     setQAItems([...qaItems, { question: "", answer: "" }]);
   };
 
@@ -275,7 +279,7 @@ export default function NewSession() {
                 <div>
                   <Label>자기소개서 *</Label>
                   <p className="text-sm text-muted-foreground mb-4">
-                    본인의 배경과 경험에 대한 질문과 답변을 추가하세요.
+                    본인의 배경과 경험에 대한 질문과 답변을 추가하세요. (최대 5개)
                   </p>
                   {qaItems.map((item, index) => (
                     <div key={index} className="space-y-2 p-4 border border-border rounded-lg mb-4">
@@ -304,9 +308,14 @@ export default function NewSession() {
                       />
                     </div>
                   ))}
-                  <Button variant="outline" onClick={addQAItem} className="w-full">
+                  <Button
+                    variant="outline"
+                    onClick={addQAItem}
+                    className="w-full"
+                    disabled={qaItems.length >= 5}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
-                    질문 추가
+                    질문 추가 {qaItems.length >= 5 && "(최대 5개)"}
                   </Button>
                 </div>
 
