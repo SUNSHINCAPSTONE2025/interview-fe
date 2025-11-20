@@ -14,6 +14,11 @@ import Feedback from "./pages/Feedback";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
+import React from 'react'
+import './App.css'
+import { SupabaseLoginTest } from './SupabaseLoginTest'
+import SignUpPage from "./pages/SignUpPage";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -32,6 +37,9 @@ const App = () => (
           <Route path="/practice/:id/setup" element={<PracticeSetup />} />
           <Route path="/practice/:id/run" element={<PracticeRoom />} />
           <Route path="/feedback/:id" element={<Feedback />} />
+
+          <Route path="/dev-auth-test" element={<SupabaseLoginTest />} />
+          <Route path="/signup" element={<SignUpPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
