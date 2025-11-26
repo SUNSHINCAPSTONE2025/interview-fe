@@ -11,7 +11,8 @@ import {
   AlertCircle,
   ArrowLeft,
   Play,
-  Loader2
+  Loader2,
+  RefreshCw
 } from "lucide-react";
 import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { sessionsApi } from "@/api/sessions";
@@ -50,6 +51,10 @@ export default function PracticeSetup() {
     } catch (error) {
       setMicPermission('denied');
     }
+  };
+
+  const handleRefresh = () => {
+    window.location.reload();
   };
 
   const allChecksComplete =
@@ -162,7 +167,7 @@ export default function PracticeSetup() {
                       <p className="text-sm text-muted-foreground">
                         {cameraPermission === 'pending' && '권한을 확인해주세요'}
                         {cameraPermission === 'granted' && '권한이 허용되었습니다'}
-                        {cameraPermission === 'denied' && '권한이 거부되었습니다. 브라우저 설정을 확인하세요'}
+                        {cameraPermission === 'denied' && '브라우저 주소창의 🔒 아이콘을 클릭하여 카메라 권한을 허용한 후 새로고침하세요'}
                       </p>
                     </div>
                   </div>
@@ -171,11 +176,14 @@ export default function PracticeSetup() {
                       확인
                     </Button>
                   )}
+                  {cameraPermission === 'denied' && (
+                    <Button onClick={handleRefresh} size="sm" variant="outline">
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      새로고침
+                    </Button>
+                  )}
                   {cameraPermission === 'granted' && (
                     <CheckCircle2 className="h-6 w-6 text-success" />
-                  )}
-                  {cameraPermission === 'denied' && (
-                    <XCircle className="h-6 w-6 text-destructive" />
                   )}
                 </div>
 
@@ -198,7 +206,7 @@ export default function PracticeSetup() {
                       <p className="text-sm text-muted-foreground">
                         {micPermission === 'pending' && '권한을 확인해주세요'}
                         {micPermission === 'granted' && '권한이 허용되었습니다'}
-                        {micPermission === 'denied' && '권한이 거부되었습니다. 브라우저 설정을 확인하세요'}
+                        {micPermission === 'denied' && '브라우저 주소창의 🔒 아이콘을 클릭하여 마이크 권한을 허용한 후 새로고침하세요'}
                       </p>
                     </div>
                   </div>
@@ -207,11 +215,14 @@ export default function PracticeSetup() {
                       확인
                     </Button>
                   )}
+                  {micPermission === 'denied' && (
+                    <Button onClick={handleRefresh} size="sm" variant="outline">
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      새로고침
+                    </Button>
+                  )}
                   {micPermission === 'granted' && (
                     <CheckCircle2 className="h-6 w-6 text-success" />
-                  )}
-                  {micPermission === 'denied' && (
-                    <XCircle className="h-6 w-6 text-destructive" />
                   )}
                 </div>
               </CardContent>
