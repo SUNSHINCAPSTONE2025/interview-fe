@@ -21,34 +21,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // 🚧 개발용 Mock User (백엔드 연결 전 임시)
-    // TODO: 백엔드 연결되면 이 부분 삭제하고 아래 주석 해제
-    const mockUser: User = {
-      id: "mock-user-123",
-      name: "테스트 사용자",
-      email: "test@example.com",
-      email_verified: true,
-    };
-    setUser(mockUser);
-    setIsLoading(false);
-    return; // 여기서 리턴해서 아래 코드 실행 안 함
-
-    // ✅ 백엔드 연결되면 위 Mock User 부분 삭제하고 아래 주석 해제
-    /*
-    const token = localStorage.getItem("access_token");
-    const storedUser = localStorage.getItem("user");
-
-    if (token && storedUser) {
+    // Supabase Auth 세션 복구
+    const initAuth = async () => {
       try {
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error("Failed to parse stored user:", error);
-        localStorage.removeItem("user");
-      }
-    }
+        const session = await authApi.getSession();
 
-    setIsLoading(false);
-    */
+        if (session && session.user) {
+          const userData: User = {
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.user_metadata?.name || session.user.email!.split('@')[0],
+            email_verified: session.user.email_confirmed_at !== null,
+          };
+
+          setUser(userData);
+          localStorage.setItem("user", JSON.stringify(userData));
+          localStorage.setItem("access_token", session.access_token);
+          localStorage.setItem("refresh_token", session.refresh_token);
+        } else {
+          // 세션 없으면 로컬 스토리지 정리
+          localStorage.removeItem("user");
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+        }
+      } catch (error) {
+        console.error("Failed to restore auth session:", error);
+        localStorage.removeItem("user");
+        localStorage.removeItem("access_token");
+        localStorage.removeItem("refresh_token");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initAuth();
   }, []);
 
   const login = async (data: LoginRequest) => {
