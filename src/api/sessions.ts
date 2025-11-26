@@ -6,6 +6,10 @@ import type {
   QuestionPlanResponse,
   StartSessionResponse,
   UploadRecordingResponse,
+  UpdateSessionStatusRequest,
+  UpdateSessionStatusResponse,
+  CreateAttemptRequest,
+  CreateAttemptResponse,
 } from "@/types/session";
 
 export const sessionsApi = {
@@ -47,7 +51,54 @@ export const sessionsApi = {
     );
   },
 
-  // Upload recording (녹화 파일 업로드)
+  // Update session status (세션 상태 업데이트)
+  updateSessionStatus: async (
+    sessionId: number,
+    data: UpdateSessionStatusRequest
+  ): Promise<UpdateSessionStatusResponse> => {
+    return apiRequest<UpdateSessionStatusResponse>(
+      `/api/sessions/${sessionId}/status`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }
+    );
+  },
+
+  // Create attempt with recording (attempt 생성 + 영상 업로드)
+  createAttemptWithRecording: async (
+    sessionId: number,
+    blob: Blob,
+    attemptData: CreateAttemptRequest
+  ): Promise<CreateAttemptResponse> => {
+    const formData = new FormData();
+
+    // 영상 파일
+    formData.append('file', blob, `session_${sessionId}_question_${attemptData.session_question_id}.webm`);
+
+    // Attempt 메타데이터
+    formData.append('session_question_id', attemptData.session_question_id.toString());
+    formData.append('started_at', attemptData.started_at);
+    formData.append('ended_at', attemptData.ended_at);
+    formData.append('duration_sec', attemptData.duration_sec.toString());
+    formData.append('status', attemptData.status);
+
+    const response = await fetch(
+      `/api/sessions/${sessionId}/attempts`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Create attempt failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  },
+
+  // Upload recording (녹화 파일 업로드) - 기존 API (하위 호환성 유지)
   uploadRecording: async (
     sessionId: number,
     questionIndex: number,

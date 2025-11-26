@@ -46,7 +46,31 @@ export default function PracticeRoom() {
   const totalQuestions = questions.length;
   const maxRecordingTime = 60; // 1분 (60초)
 
-  // 카메라/마이크 시작
+  // 세션 시작 (status: running으로 변경)
+  useEffect(() => {
+    const startSession = async () => {
+      if (!sessionId) return;
+
+      try {
+        await sessionsApi.updateSessionStatus(parseInt(sessionId), {
+          status: "running",
+          started_at: new Date().toISOString(),
+        });
+        console.log(`Session ${sessionId} started`);
+      } catch (error) {
+        console.error("Failed to start session:", error);
+        toast({
+          title: "세션 시작 실패",
+          description: "세션을 시작할 수 없습니다.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    startSession();
+  }, [sessionId, toast]);
+
+  // 카메라/마이크 시작 (practiceSetup에서 이미 권한을 받았으므로 바로 시작)
   useEffect(() => {
     const startMedia = async () => {
       try {
@@ -62,7 +86,7 @@ export default function PracticeRoom() {
         console.error("Failed to start media:", error);
         toast({
           title: "카메라/마이크 오류",
-          description: "카메라 또는 마이크에 접근할 수 없습니다.",
+          description: "카메라 또는 마이크에 접근할 수 없습니다. 이전 화면에서 권한을 허용해주세요.",
           variant: "destructive",
         });
       }
@@ -76,7 +100,42 @@ export default function PracticeRoom() {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [toast]);
+
+  // 페이지 이탈 감지 (세션 canceled 처리)
+  useEffect(() => {
+    const handleBeforeUnload = async (e: BeforeUnloadEvent) => {
+      // 녹화 중이면 경고 표시
+      if (isRecording) {
+        e.preventDefault();
+        e.returnValue = "녹화 중입니다. 정말 나가시겠습니까?";
+      }
+
+      // 세션을 canceled로 변경 (MVP: 동기 처리)
+      if (sessionId) {
+        try {
+          // sendBeacon을 사용하여 페이지 이탈 시에도 요청 전송
+          const data = JSON.stringify({
+            status: "canceled",
+            ended_at: new Date().toISOString(),
+          });
+
+          navigator.sendBeacon(
+            `/api/sessions/${sessionId}/status`,
+            new Blob([data], { type: "application/json" })
+          );
+        } catch (error) {
+          console.error("Failed to cancel session:", error);
+        }
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [sessionId, isRecording]);
 
   // 질문 변경 시 자동으로 생각 시간 시작
   useEffect(() => {
@@ -272,31 +331,22 @@ export default function PracticeRoom() {
     if (currentQuestion < totalQuestions - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      // Practice completed - 모든 녹화 완료
+      // 마지막 질문 완료 - 세션을 done으로 변경
+      if (sessionId) {
+        try {
+          await sessionsApi.updateSessionStatus(parseInt(sessionId), {
+            status: "done",
+            ended_at: new Date().toISOString(),
+          });
+          console.log(`Session ${sessionId} completed successfully`);
+        } catch (error) {
+          console.error("Failed to complete session:", error);
+        }
+      }
+
       console.log(`Total recordings uploaded: ${recordedBlobs.length}`);
       navigate(`/feedback/${id}?session_id=${sessionId}`);
     }
-  };
-
-  const handleStop = async () => {
-    if (isRecording && mediaRecorderRef.current?.state === 'recording') {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current = null;
-    }
-
-    // 녹화된 모든 파일 업로드
-    if (recordedBlobs.length > 0) {
-      toast({
-        title: "답변 저장 중...",
-        description: `${recordedBlobs.length}개의 답변을 저장하고 있습니다.`,
-      });
-
-      for (let i = 0; i < recordedBlobs.length; i++) {
-        await uploadRecording(i, recordedBlobs[i]);
-      }
-    }
-
-    navigate(`/feedback/${id}?session_id=${sessionId}`);
   };
 
   const formatTime = (seconds: number) => {
@@ -330,10 +380,6 @@ export default function PracticeRoom() {
                 녹화 중
               </Badge>
             )}
-            <Button variant="destructive" onClick={handleStop}>
-              <Square className="h-4 w-4 mr-2" />
-              세션 종료
-            </Button>
           </div>
         </div>
       </div>
