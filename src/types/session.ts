@@ -50,3 +50,31 @@ export interface CreateSessionResponse {
   question_count: number;
   questions: SessionQuestion[];
 }
+
+// Question plan request
+export interface QuestionPlanRequest {
+  mode: PracticeType;
+  count: number; // 1-10 범위
+}
+
+// Question plan (goal and tips)
+export interface QuestionPlan {
+  mode: PracticeType;
+  goal_id: string;
+  tip_ids: string[];
+}
+
+// Question plan response
+export interface QuestionPlanResponse {
+  message: string;
+  plan: PracticeType;
+  generated_questions: string[];
+}
+
+// Start session response
+export interface StartSessionResponse {
+  message: string;
+  session_id: number;
+  interview_id: number;
+  status: SessionStatus;
+}

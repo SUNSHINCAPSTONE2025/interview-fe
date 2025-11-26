@@ -4,14 +4,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Play, Target, Clock, Lightbulb } from "lucide-react";
+import { ArrowLeft, Play, Target, Clock, Lightbulb, Loader2 } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
+import { sessionsApi } from "@/api/sessions";
+import { useToast } from "@/hooks/use-toast";
+import type { PracticeType } from "@/types/session";
 
 export default function PracticeGuide() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [step, setStep] = useState(1);
-  const [practiceType, setPracticeType] = useState("");
+  const [practiceType, setPracticeType] = useState<PracticeType | "">("");
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
   // Mock session data (나중에 DB에서 가져올 데이터)
   const session = {
@@ -20,8 +25,8 @@ export default function PracticeGuide() {
     mode: "Interview" as const,
     totalQuestions: 15,
     practiceTypes: {
-      "technical": { label: "기술 질문", count: 8 },
-      "behavioral": { label: "소프트 질문", count: 7 }
+      "soft": { label: "소프트 질문", count: 5 },
+      "job": { label: "직무 질문", count: 5 }
     }
   };
 
@@ -35,6 +40,87 @@ export default function PracticeGuide() {
   // 선택된 유형의 질문 개수와 예상 시간 계산
   const selectedTypeData = practiceType ? session.practiceTypes[practiceType as keyof typeof session.practiceTypes] : null;
   const estimatedTime = selectedTypeData ? selectedTypeData.count * 2 : 0; // 질문당 2분
+
+  // 질문 생성 및 다음 페이지로 이동
+  const handleStartPractice = async () => {
+    if (!id || !practiceType) {
+      toast({
+        title: "오류",
+        description: "연습 유형을 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingQuestions(true);
+
+    // 🚧 개발용: Mock 질문 데이터
+    // TODO: 백엔드 연결 시 아래 주석 해제하고 Mock 데이터 삭제
+    const mockQuestions = practiceType === "soft"
+      ? [
+          "자기소개를 해주세요.",
+          "이 회사에 지원한 이유는 무엇인가요?",
+          "가장 어려웠던 경험과 그것을 어떻게 극복했는지 말씀해주세요.",
+          "팀원과 갈등이 있었던 경험과 해결 방법을 공유해주세요.",
+          "5년 후 자신의 모습은 어떨 것 같나요?"
+        ]
+      : [
+          "최근에 진행한 프로젝트에 대해 설명해주세요.",
+          "사용하는 기술 스택과 그 이유를 말씀해주세요.",
+          "코드 리뷰 시 가장 중요하게 생각하는 점은 무엇인가요?",
+          "어려운 기술적 문제를 해결한 경험을 공유해주세요.",
+          "새로운 기술을 학습하는 본인만의 방법이 있나요?"
+        ];
+
+    // 로딩 시뮬레이션 (실제 API 호출 느낌)
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    toast({
+      title: "질문 생성 완료",
+      description: `${mockQuestions.length}개의 질문이 생성되었습니다.`,
+    });
+
+    // 생성된 질문을 가지고 다음 페이지로 이동
+    navigate(`/practice/${id}/setup?type=${practiceType}`, {
+      state: {
+        questions: mockQuestions,
+        plan: practiceType
+      }
+    });
+
+    /* 백엔드 연결 시 사용할 코드
+    try {
+      const interviewId = parseInt(id);
+
+      // 질문 생성 API 호출
+      const response = await sessionsApi.generateQuestionPlan(interviewId, {
+        mode: practiceType,
+        count: 5, // 5개 고정
+      });
+
+      toast({
+        title: "질문 생성 완료",
+        description: `${response.generated_questions.length}개의 질문이 생성되었습니다.`,
+      });
+
+      // 생성된 질문을 가지고 다음 페이지로 이동
+      navigate(`/practice/${id}/setup?type=${practiceType}`, {
+        state: {
+          questions: response.generated_questions,
+          plan: response.plan
+        }
+      });
+    } catch (error) {
+      console.error("Failed to generate questions:", error);
+      toast({
+        title: "질문 생성 실패",
+        description: "질문을 생성하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      });
+      setIsGeneratingQuestions(false);
+    }
+    */
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
@@ -127,16 +213,30 @@ export default function PracticeGuide() {
 
               {/* Action Buttons */}
               <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep(1)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(1)}
+                  disabled={isGeneratingQuestions}
+                >
                   뒤로
                 </Button>
                 <Button
                   variant="hero"
-                  onClick={() => navigate(`/practice/${id}/setup?type=${practiceType}`)}
+                  onClick={handleStartPractice}
+                  disabled={isGeneratingQuestions}
                   className="shadow-hover"
                 >
-                  <Play className="h-5 w-5 mr-2" />
-                  연습 시작
+                  {isGeneratingQuestions ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      질문 생성 중...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-5 w-5 mr-2" />
+                      연습 시작
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

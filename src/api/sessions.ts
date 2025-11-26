@@ -2,21 +2,18 @@ import { apiRequest } from "@/lib/api";
 import type {
   Session,
   SessionWithQuestions,
-  CreateSessionRequest,
-  CreateSessionResponse,
+  QuestionPlanRequest,
+  QuestionPlanResponse,
+  StartSessionResponse,
 } from "@/types/session";
 
 export const sessionsApi = {
-  // Create a new session for interview
-  create: async (
-    contentId: number,
-    data: CreateSessionRequest
-  ): Promise<CreateSessionResponse> => {
-    return apiRequest<CreateSessionResponse>(
-      `/api/interviews/${contentId}/sessions`,
+  // Start a new session (기본 세션 시작)
+  startSession: async (interviewId: number): Promise<StartSessionResponse> => {
+    return apiRequest<StartSessionResponse>(
+      `/api/interviews/${interviewId}/sessions/start`,
       {
         method: "POST",
-        body: JSON.stringify(data),
       }
     );
   },
@@ -33,5 +30,19 @@ export const sessionsApi = {
     return apiRequest<Session[]>(`/api/sessions?content_id=${contentId}`, {
       method: "GET",
     });
+  },
+
+  // Generate question plan (질문 생성)
+  generateQuestionPlan: async (
+    interviewId: number,
+    data: QuestionPlanRequest
+  ): Promise<QuestionPlanResponse> => {
+    return apiRequest<QuestionPlanResponse>(
+      `/api/interviews/${interviewId}/question-plan`,
+      {
+        method: "POST",
+        body: JSON.stringify(data),
+      }
+    );
   },
 };

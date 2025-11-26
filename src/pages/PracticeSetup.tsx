@@ -14,7 +14,7 @@ import {
   Loader2,
   RefreshCw
 } from "lucide-react";
-import { Link, useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
 import { sessionsApi } from "@/api/sessions";
 import { useToast } from "@/hooks/use-toast";
 import type { PracticeType } from "@/types/session";
@@ -22,6 +22,7 @@ import type { PracticeType } from "@/types/session";
 export default function PracticeSetup() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
@@ -32,6 +33,10 @@ export default function PracticeSetup() {
 
   // Get practice type from URL params
   const practiceType = searchParams.get("type") as PracticeType;
+
+  // Get questions from location state (passed from PracticeGuide)
+  const questions = location.state?.questions as string[] | undefined;
+  const plan = location.state?.plan;
 
   const checkCameraPermission = async () => {
     try {
@@ -62,9 +67,9 @@ export default function PracticeSetup() {
     micPermission === 'granted' &&
     acknowledged;
 
-  // Handle interview start - create session and navigate
+  // Handle interview start - start session and navigate
   const handleStartInterview = async () => {
-    if (!id || !practiceType) {
+    if (!id || !practiceType || !questions) {
       toast({
         title: "오류",
         description: "면접 정보가 올바르지 않습니다.",
@@ -75,23 +80,47 @@ export default function PracticeSetup() {
 
     setIsCreatingSession(true);
 
+    // 🚧 개발용: Mock 세션 데이터
+    // TODO: 백엔드 연결 시 아래 주석 해제하고 Mock 데이터 삭제
+    const mockSessionId = Math.floor(Math.random() * 10000);
+
+    // 로딩 시뮬레이션
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // 세션 생성 성공 - 생성된 세션 ID로 면접 시작
+    toast({
+      title: "면접 세션 생성 완료",
+      description: `${questions.length}개의 질문으로 면접을 시작합니다.`,
+    });
+
+    // 생성된 세션 ID와 질문을 가지고 면접 실행 페이지로 이동
+    navigate(`/practice/${id}/run?session_id=${mockSessionId}`, {
+      state: {
+        questions,
+        plan
+      }
+    });
+
+    /* 백엔드 연결 시 사용할 코드
     try {
-      const contentId = parseInt(id);
-      const response = await sessionsApi.create(contentId, {
-        question_type: practiceType,
-        question_count: 5, // 5개 고정
-      });
+      const interviewId = parseInt(id);
+      const response = await sessionsApi.startSession(interviewId);
 
       // 세션 생성 성공 - 생성된 세션 ID로 면접 시작
       toast({
         title: "면접 세션 생성 완료",
-        description: `${response.question_count}개의 질문으로 면접을 시작합니다.`,
+        description: `${questions.length}개의 질문으로 면접을 시작합니다.`,
       });
 
-      // 생성된 세션 ID를 가지고 면접 실행 페이지로 이동
-      navigate(`/practice/${id}/run?session_id=${response.session_id}`);
+      // 생성된 세션 ID와 질문을 가지고 면접 실행 페이지로 이동
+      navigate(`/practice/${id}/run?session_id=${response.session_id}`, {
+        state: {
+          questions,
+          plan
+        }
+      });
     } catch (error) {
-      console.error("Failed to create session:", error);
+      console.error("Failed to start session:", error);
       toast({
         title: "세션 생성 실패",
         description: "면접 세션을 생성하는 중 오류가 발생했습니다. 다시 시도해주세요.",
@@ -99,6 +128,7 @@ export default function PracticeSetup() {
       });
       setIsCreatingSession(false);
     }
+    */
   };
 
   const notices = [
