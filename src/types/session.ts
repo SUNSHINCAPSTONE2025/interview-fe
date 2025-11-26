@@ -78,3 +78,15 @@ export interface StartSessionResponse {
   interview_id: number;
   status: SessionStatus;
 }
+
+// Upload recording response
+export interface UploadRecordingResponse {
+  success: boolean;
+  session_id: number;
+  question_index: number;
+  video_url: string;
+  audio_url: string;
+  duration?: number;
+  video_size?: number;
+  audio_size?: number;
+}

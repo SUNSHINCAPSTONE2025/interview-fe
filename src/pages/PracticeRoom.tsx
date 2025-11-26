@@ -10,10 +10,12 @@ import {
   ChevronRight,
   AlertCircle,
   Brain,
-  MessageSquare
+  MessageSquare,
+  Loader2
 } from "lucide-react";
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { sessionsApi } from "@/api/sessions";
 
 export default function PracticeRoom() {
   const { id } = useParams();
@@ -39,6 +41,7 @@ export default function PracticeRoom() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingEnded, setRecordingEnded] = useState(false);
   const [recordedBlobs, setRecordedBlobs] = useState<Blob[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   const totalQuestions = questions.length;
   const maxRecordingTime = 60; // 1분 (60초)
@@ -206,24 +209,93 @@ export default function PracticeRoom() {
     }
   };
 
-  const handleNext = () => {
+  // 녹화 파일 업로드
+  const uploadRecording = async (questionIndex: number, blob: Blob) => {
+    if (!sessionId) {
+      console.error("Session ID not found");
+      return false;
+    }
+
+    try {
+      setIsUploading(true);
+
+      const response = await sessionsApi.uploadRecording(
+        parseInt(sessionId),
+        questionIndex,
+        blob
+      );
+
+      console.log(`Upload success for Q${questionIndex}:`, response);
+
+      toast({
+        title: "녹화 저장 완료",
+        description: `질문 ${questionIndex + 1}의 답변이 저장되었습니다.`,
+      });
+
+      return true;
+    } catch (error) {
+      console.error(`Upload failed for Q${questionIndex}:`, error);
+
+      toast({
+        title: "저장 실패",
+        description: "답변 저장에 실패했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      });
+
+      return false;
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleNext = async () => {
+    // 현재 질문의 녹화 업로드
+    if (recordedBlobs[currentQuestion]) {
+      const uploadSuccess = await uploadRecording(
+        currentQuestion,
+        recordedBlobs[currentQuestion]
+      );
+
+      if (!uploadSuccess) {
+        // 업로드 실패 시 사용자에게 재시도 옵션 제공
+        const retry = window.confirm(
+          "답변 저장에 실패했습니다. 다시 시도하시겠습니까?"
+        );
+
+        if (retry) {
+          await uploadRecording(currentQuestion, recordedBlobs[currentQuestion]);
+        }
+      }
+    }
+
     // 다음 질문으로 이동
     if (currentQuestion < totalQuestions - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
       // Practice completed - 모든 녹화 완료
-      console.log(`Total recordings: ${recordedBlobs.length}`);
-      // TODO: API로 녹화 데이터 전송
+      console.log(`Total recordings uploaded: ${recordedBlobs.length}`);
       navigate(`/feedback/${id}?session_id=${sessionId}`);
     }
   };
 
-  const handleStop = () => {
+  const handleStop = async () => {
     if (isRecording && mediaRecorderRef.current?.state === 'recording') {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current = null;
     }
-    // TODO: API로 녹화 데이터 전송
+
+    // 녹화된 모든 파일 업로드
+    if (recordedBlobs.length > 0) {
+      toast({
+        title: "답변 저장 중...",
+        description: `${recordedBlobs.length}개의 답변을 저장하고 있습니다.`,
+      });
+
+      for (let i = 0; i < recordedBlobs.length; i++) {
+        await uploadRecording(i, recordedBlobs[i]);
+      }
+    }
+
     navigate(`/feedback/${id}?session_id=${sessionId}`);
   };
 
@@ -314,9 +386,23 @@ export default function PracticeRoom() {
               )}
 
               {recordingEnded && (
-                <Button onClick={handleNext} className="w-full" variant="default">
-                  {currentQuestion < totalQuestions - 1 ? "다음 질문" : "인터뷰 완료"}
-                  <ChevronRight className="h-4 w-4 ml-2" />
+                <Button
+                  onClick={handleNext}
+                  className="w-full"
+                  variant="default"
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      저장 중...
+                    </>
+                  ) : (
+                    <>
+                      {currentQuestion < totalQuestions - 1 ? "다음 질문" : "인터뷰 완료"}
+                      <ChevronRight className="h-4 w-4 ml-2" />
+                    </>
+                  )}
                 </Button>
               )}
             </div>

@@ -5,6 +5,7 @@ import type {
   QuestionPlanRequest,
   QuestionPlanResponse,
   StartSessionResponse,
+  UploadRecordingResponse,
 } from "@/types/session";
 
 export const sessionsApi = {
@@ -44,5 +45,30 @@ export const sessionsApi = {
         body: JSON.stringify(data),
       }
     );
+  },
+
+  // Upload recording (녹화 파일 업로드)
+  uploadRecording: async (
+    sessionId: number,
+    questionIndex: number,
+    blob: Blob
+  ): Promise<UploadRecordingResponse> => {
+    const formData = new FormData();
+    formData.append('file', blob, `q${questionIndex}.webm`);
+
+    const response = await fetch(
+      `/api/sessions/${sessionId}/recordings/${questionIndex}`,
+      {
+        method: "POST",
+        body: formData,
+        // FormData는 Content-Type을 자동으로 설정하므로 headers 불필요
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    return response.json();
   },
 };
