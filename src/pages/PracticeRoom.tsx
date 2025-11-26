@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -9,40 +9,79 @@ import {
   Square,
   ChevronRight,
   AlertCircle,
-  Brain
+  Brain,
+  MessageSquare
 } from "lucide-react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PracticeRoom() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
 
-  const [isThinking, setIsThinking] = useState(false);
+  // Get data from location state
+  const questions = (location.state?.questions as string[]) || [];
+  const sessionId = searchParams.get("session_id");
+
+  // Refs
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+
+  // States
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isThinking, setIsThinking] = useState(true); // 자동 시작
   const [isRecording, setIsRecording] = useState(false);
   const [thinkingTime, setThinkingTime] = useState(60);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [timeRemaining, setTimeRemaining] = useState(60);
+  const [recordingTime, setRecordingTime] = useState(0);
   const [recordingEnded, setRecordingEnded] = useState(false);
-
-  const questions = [
-    {
-      id: 1,
-      text: "최근에 해결한 어려운 기술 문제에 대해 말씀해주세요.",
-      hints: ["STAR 방법 사용", "본인의 역할에 대해 구체적으로", "영향을 수치화"]
-    },
-    {
-      id: 2,
-      text: "최신 프론트엔드 기술을 어떻게 최신 상태로 유지하나요?",
-      hints: ["구체적인 리소스 언급", "지속적인 학습 보여주기", "최근 예시 제공"]
-    },
-    {
-      id: 3,
-      text: "어려운 팀원과 협업해야 했던 경험을 설명해주세요.",
-      hints: ["해결 과정에 집중", "공감 표시", "긍정적인 결과 강조"]
-    }
-  ];
+  const [recordedBlobs, setRecordedBlobs] = useState<Blob[]>([]);
 
   const totalQuestions = questions.length;
+  const maxRecordingTime = 60; // 1분 (60초)
+
+  // 카메라/마이크 시작
+  useEffect(() => {
+    const startMedia = async () => {
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 1280, height: 720 },
+          audio: true
+        });
+        setStream(mediaStream);
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+        }
+      } catch (error) {
+        console.error("Failed to start media:", error);
+        toast({
+          title: "카메라/마이크 오류",
+          description: "카메라 또는 마이크에 접근할 수 없습니다.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    startMedia();
+
+    // Cleanup
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  // 질문 변경 시 자동으로 생각 시간 시작
+  useEffect(() => {
+    setIsThinking(true);
+    setThinkingTime(60);
+    setRecordingTime(0);
+    setRecordingEnded(false);
+  }, [currentQuestion]);
 
   // Thinking time countdown (60초)
   useEffect(() => {
@@ -53,52 +92,139 @@ export default function PracticeRoom() {
       // 생각 시간 종료 -> 자동으로 녹화 시작
       setIsThinking(false);
       setIsRecording(true);
-      setTimeRemaining(60);
-    }
-  }, [isThinking, thinkingTime]);
+      setRecordingTime(0);
 
-  // Recording time countdown (60초)
+      // 녹화 시작
+      if (stream && !mediaRecorderRef.current) {
+        try {
+          const mediaRecorder = new MediaRecorder(stream, {
+            mimeType: 'video/webm;codecs=vp9,opus'
+          });
+
+          const chunks: Blob[] = [];
+
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              chunks.push(event.data);
+            }
+          };
+
+          mediaRecorder.onstop = () => {
+            const videoBlob = new Blob(chunks, { type: 'video/webm' });
+            setRecordedBlobs(prev => [...prev, videoBlob]);
+            console.log(`Recording saved:`, videoBlob.size, 'bytes');
+          };
+
+          mediaRecorder.start();
+          mediaRecorderRef.current = mediaRecorder;
+        } catch (error) {
+          console.error("Failed to start recording:", error);
+        }
+      }
+    }
+  }, [isThinking, thinkingTime, stream]);
+
+  // Recording time countdown
   useEffect(() => {
-    if (isRecording && !recordingEnded && timeRemaining > 0) {
-      const timer = setTimeout(() => setTimeRemaining(timeRemaining - 1), 1000);
-      return () => clearTimeout(timer);
-    } else if (isRecording && !recordingEnded && timeRemaining === 0) {
-      // 녹화 시간 종료 -> 자동으로 다음 질문으로 넘어가지 않고 버튼 표시
-      setIsRecording(false);
-      setRecordingEnded(true);
-    }
-  }, [isRecording, recordingEnded, timeRemaining]);
+    if (isRecording && !recordingEnded) {
+      const timer = setTimeout(() => {
+        const newTime = recordingTime + 1;
+        setRecordingTime(newTime);
 
-  const handleStart = () => {
-    setIsThinking(true);
-    setThinkingTime(60);
-    setRecordingEnded(false);
+        if (newTime >= maxRecordingTime) {
+          // 최대 녹화 시간 도달
+          setIsRecording(false);
+          setRecordingEnded(true);
+
+          // 녹화 종료
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            mediaRecorderRef.current.stop();
+            mediaRecorderRef.current = null;
+          }
+        }
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [isRecording, recordingEnded, recordingTime, maxRecordingTime]);
+
+  // "대답하기" 버튼 클릭 (생각 시간 중)
+  const handleStartAnswer = () => {
+    if (!stream) {
+      toast({
+        title: "녹화 오류",
+        description: "카메라/마이크가 준비되지 않았습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsThinking(false);
+    setIsRecording(true);
+    setRecordingTime(0);
+
+    // 녹화 시작
+    try {
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm;codecs=vp9,opus'
+      });
+
+      const chunks: Blob[] = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const videoBlob = new Blob(chunks, { type: 'video/webm' });
+        setRecordedBlobs(prev => [...prev, videoBlob]);
+        console.log(`Recording saved:`, videoBlob.size, 'bytes');
+      };
+
+      mediaRecorder.start();
+      mediaRecorderRef.current = mediaRecorder;
+    } catch (error) {
+      console.error("Failed to start recording:", error);
+      toast({
+        title: "녹화 시작 실패",
+        description: "녹화를 시작할 수 없습니다.",
+        variant: "destructive",
+      });
+    }
   };
 
+  // "대답 종료" 버튼 클릭 (녹화 중)
   const handleEndAnswer = () => {
-    // 대답 종료 버튼 클릭
     setIsRecording(false);
     setRecordingEnded(true);
+
+    // 녹화 종료
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
   };
 
   const handleNext = () => {
     // 다음 질문으로 이동
     if (currentQuestion < totalQuestions - 1) {
       setCurrentQuestion(currentQuestion + 1);
-      setIsThinking(false);
-      setIsRecording(false);
-      setRecordingEnded(false);
-      setThinkingTime(60);
-      setTimeRemaining(60);
     } else {
-      // Practice completed
-      navigate(`/feedback/${id}?attempt=new`);
+      // Practice completed - 모든 녹화 완료
+      console.log(`Total recordings: ${recordedBlobs.length}`);
+      // TODO: API로 녹화 데이터 전송
+      navigate(`/feedback/${id}?session_id=${sessionId}`);
     }
   };
 
   const handleStop = () => {
-    setIsRecording(false);
-    navigate(`/feedback/${id}?attempt=new`);
+    if (isRecording && mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
+    // TODO: API로 녹화 데이터 전송
+    navigate(`/feedback/${id}?session_id=${sessionId}`);
   };
 
   const formatTime = (seconds: number) => {
@@ -148,7 +274,7 @@ export default function PracticeRoom() {
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">현재 질문</h3>
                 <p className="text-lg font-semibold leading-relaxed">
-                  {questions[currentQuestion].text}
+                  {questions[currentQuestion] || "질문을 불러오는 중..."}
                 </p>
               </div>
 
@@ -158,19 +284,25 @@ export default function PracticeRoom() {
                   빠른 팁
                 </h4>
                 <ul className="space-y-2">
-                  {questions[currentQuestion].hints.map((hint, index) => (
-                    <li key={index} className="text-sm text-muted-foreground flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
-                      {hint}
-                    </li>
-                  ))}
+                  <li className="text-sm text-muted-foreground flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
+                    STAR 방법 사용 (상황, 과제, 행동, 결과)
+                  </li>
+                  <li className="text-sm text-muted-foreground flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
+                    구체적인 예시와 수치 제시
+                  </li>
+                  <li className="text-sm text-muted-foreground flex items-start gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-primary mt-2" />
+                    카메라를 보며 명확하게 답변
+                  </li>
                 </ul>
               </div>
 
-              {!isThinking && !isRecording && !recordingEnded && (
-                <Button onClick={handleStart} className="w-full" variant="hero">
-                  <Play className="h-4 w-4 mr-2" />
-                  시작하기
+              {isThinking && (
+                <Button onClick={handleStartAnswer} className="w-full" variant="hero">
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  대답하기
                 </Button>
               )}
 
@@ -182,8 +314,8 @@ export default function PracticeRoom() {
               )}
 
               {recordingEnded && (
-                <Button onClick={handleNext} className="w-full" variant="success">
-                  다음 질문
+                <Button onClick={handleNext} className="w-full" variant="default">
+                  {currentQuestion < totalQuestions - 1 ? "다음 질문" : "인터뷰 완료"}
                   <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               )}
@@ -207,23 +339,33 @@ export default function PracticeRoom() {
             )}
 
             {/* Camera Preview */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
-                <Camera className="h-24 w-24 text-slate-600" />
-                <div className="absolute bottom-4 left-4 text-white/60 text-sm">
-                  카메라 미리보기가 여기에 표시됩니다
+            <div className="absolute inset-0">
+              {stream ? (
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-slate-800 to-slate-900 flex items-center justify-center">
+                  <Camera className="h-24 w-24 text-slate-600" />
+                  <div className="absolute bottom-4 left-4 text-white/60 text-sm">
+                    카메라를 시작하는 중...
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Timer Overlay */}
             {isRecording && (
               <div className="absolute top-4 right-4 z-10">
                 <Badge
-                  variant={timeRemaining < 10 ? "destructive" : "default"}
+                  variant={recordingTime > maxRecordingTime - 10 ? "destructive" : "default"}
                   className="text-lg px-4 py-2"
                 >
-                  {formatTime(timeRemaining)}
+                  {formatTime(recordingTime)} / {formatTime(maxRecordingTime)}
                 </Badge>
               </div>
             )}
