@@ -79,9 +79,6 @@ export default function PracticeRoom() {
           audio: true
         });
         setStream(mediaStream);
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
       } catch (error) {
         console.error("Failed to start media:", error);
         toast({
@@ -101,6 +98,17 @@ export default function PracticeRoom() {
       }
     };
   }, [toast]);
+
+  // stream이 설정되면 video 요소에 연결
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+      // 명시적으로 재생 시작 (일부 브라우저에서 필요)
+      videoRef.current.play().catch((error) => {
+        console.error("Failed to play video:", error);
+      });
+    }
+  }, [stream]);
 
   // 페이지 이탈 감지 (세션 canceled 처리)
   useEffect(() => {
