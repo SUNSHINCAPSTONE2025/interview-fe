@@ -16,6 +16,7 @@ export interface Session {
   started_at: string | null;
   ended_at: string | null;
   question_count: number;
+  session_max: number; // 최대 생성 가능 세션 갯수
   company_snapshot?: string;
   role_snapshot?: string;
   created_at: string;
