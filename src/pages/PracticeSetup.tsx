@@ -80,28 +80,6 @@ export default function PracticeSetup() {
 
     setIsCreatingSession(true);
 
-    // 🚧 개발용: Mock 세션 데이터
-    // TODO: 백엔드 연결 시 아래 주석 해제하고 Mock 데이터 삭제
-    const mockSessionId = Math.floor(Math.random() * 10000);
-
-    // 로딩 시뮬레이션
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // 세션 생성 성공 - 생성된 세션 ID로 면접 시작
-    toast({
-      title: "면접 세션 생성 완료",
-      description: `${questions.length}개의 질문으로 면접을 시작합니다.`,
-    });
-
-    // 생성된 세션 ID와 질문을 가지고 면접 실행 페이지로 이동
-    navigate(`/practice/${id}/run?session_id=${mockSessionId}`, {
-      state: {
-        questions,
-        plan
-      }
-    });
-
-    /* 백엔드 연결 시 사용할 코드
     try {
       const interviewId = parseInt(id);
       const response = await sessionsApi.startSession(interviewId);
@@ -128,7 +106,6 @@ export default function PracticeSetup() {
       });
       setIsCreatingSession(false);
     }
-    */
   };
 
   const notices = [

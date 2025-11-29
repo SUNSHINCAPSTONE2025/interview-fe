@@ -18,16 +18,9 @@ export default function PracticeGuide() {
   const [practiceType, setPracticeType] = useState<PracticeType | "">("");
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
-  // Mock session data (나중에 DB에서 가져올 데이터)
-  const session = {
-    id: "1",
-    title: "구글 소프트웨어 엔지니어",
-    mode: "Interview" as const,
-    totalQuestions: 15,
-    practiceTypes: {
-      "soft": { label: "소프트 질문", count: 5 },
-      "job": { label: "직무 질문", count: 5 }
-    }
+  const practiceTypes = {
+    "soft": { label: "소프트 질문", count: 5 },
+    "job": { label: "직무 질문", count: 5 }
   };
 
   const tips = [
@@ -38,7 +31,7 @@ export default function PracticeGuide() {
   ];
 
   // 선택된 유형의 질문 개수와 예상 시간 계산
-  const selectedTypeData = practiceType ? session.practiceTypes[practiceType as keyof typeof session.practiceTypes] : null;
+  const selectedTypeData = practiceType ? practiceTypes[practiceType as keyof typeof practiceTypes] : null;
   const estimatedTime = selectedTypeData ? selectedTypeData.count * 2 : 0; // 질문당 2분
 
   // 질문 생성 및 다음 페이지로 이동
@@ -54,41 +47,6 @@ export default function PracticeGuide() {
 
     setIsGeneratingQuestions(true);
 
-    // 🚧 개발용: Mock 질문 데이터
-    // TODO: 백엔드 연결 시 아래 주석 해제하고 Mock 데이터 삭제
-    const mockQuestions = practiceType === "soft"
-      ? [
-          "자기소개를 해주세요.",
-          "이 회사에 지원한 이유는 무엇인가요?",
-          "가장 어려웠던 경험과 그것을 어떻게 극복했는지 말씀해주세요.",
-          "팀원과 갈등이 있었던 경험과 해결 방법을 공유해주세요.",
-          "5년 후 자신의 모습은 어떨 것 같나요?"
-        ]
-      : [
-          "최근에 진행한 프로젝트에 대해 설명해주세요.",
-          "사용하는 기술 스택과 그 이유를 말씀해주세요.",
-          "코드 리뷰 시 가장 중요하게 생각하는 점은 무엇인가요?",
-          "어려운 기술적 문제를 해결한 경험을 공유해주세요.",
-          "새로운 기술을 학습하는 본인만의 방법이 있나요?"
-        ];
-
-    // 로딩 시뮬레이션 (실제 API 호출 느낌)
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    toast({
-      title: "질문 생성 완료",
-      description: `${mockQuestions.length}개의 질문이 생성되었습니다.`,
-    });
-
-    // 생성된 질문을 가지고 다음 페이지로 이동
-    navigate(`/practice/${id}/setup?type=${practiceType}`, {
-      state: {
-        questions: mockQuestions,
-        plan: practiceType
-      }
-    });
-
-    /* 백엔드 연결 시 사용할 코드
     try {
       const interviewId = parseInt(id);
 
@@ -119,7 +77,6 @@ export default function PracticeGuide() {
       });
       setIsGeneratingQuestions(false);
     }
-    */
   };
 
   return (
@@ -134,8 +91,8 @@ export default function PracticeGuide() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">{session.title}</h1>
-              <p className="text-muted-foreground">연습 가이드</p>
+              <h1 className="text-3xl font-bold">연습 가이드</h1>
+              <p className="text-muted-foreground">면접 연습을 시작합니다</p>
             </div>
           </div>
 
@@ -150,7 +107,7 @@ export default function PracticeGuide() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <RadioGroup value={practiceType} onValueChange={setPracticeType}>
-                  {Object.entries(session.practiceTypes).map(([key, data]) => (
+                  {Object.entries(practiceTypes).map(([key, data]) => (
                     <div key={key} className="flex items-center space-x-2 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
                       <RadioGroupItem value={key} id={key} />
                       <Label htmlFor={key} className="flex-1 cursor-pointer">
