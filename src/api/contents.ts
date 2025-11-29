@@ -12,7 +12,7 @@ import type {
 export const contentsApi = {
   // Content 목록 조회
   getAll: async (): Promise<ContentListResponse> => {
-    return apiRequest<ContentListResponse>("/api/contents", {
+    return apiRequest<ContentListResponse>("/api/interviews/contents", {
       method: "GET",
     });
   },

@@ -52,14 +52,16 @@ export interface CreateResumeResponse {
 
 // 면접 질문 생성 요청
 export interface GenerateInterviewQuestionsRequest {
+  content_id: number;
   qas: Array<{ q: string; a: string }>;
-  emit_confidence: boolean;
-  use_seed: boolean;
-  top_k_seed: number;
+  emit_confidence?: boolean;
+  use_seed?: boolean;
+  top_k_seed?: number;
 }
 
-// 면접 질문 생성 응답 (백엔드 응답 형식에 맞게 수정 필요)
+// 면접 질문 생성 응답
 export interface GenerateInterviewQuestionsResponse {
-  questions: string[];  // 생성된 질문 배열 (실제 응답 형식에 맞게 수정 필요)
-  // 백엔드 응답에 따라 추가 필드가 있을 수 있음
+  message: string;
+  content_id: number;
+  generated_count: number;
 }

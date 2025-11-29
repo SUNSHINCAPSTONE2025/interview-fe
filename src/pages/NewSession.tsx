@@ -122,6 +122,7 @@ export default function NewSession() {
 
         // 3. 자소서 기반 면접 질문 생성
         const generateQuestionsData = {
+          content_id: contentResponse.id,
           qas: validQAItems.map(item => ({
             q: item.question,
             a: item.answer,
@@ -133,7 +134,7 @@ export default function NewSession() {
 
         const questionsResponse = await contentsApi.generateInterviewQuestions(generateQuestionsData);
 
-        toast.success("면접 질문이 생성되었습니다!");
+        toast.success(`면접 질문 ${questionsResponse.generated_count}개가 생성되었습니다!`);
       }
 
       // 4. 생성된 세션 상세 페이지로 이동
