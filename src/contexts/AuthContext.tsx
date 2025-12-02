@@ -115,6 +115,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authApi.logout();
       setUser(null);
       localStorage.removeItem("user");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
       toast.success("로그아웃되었습니다.");
     } catch (error) {
       setUser(null);

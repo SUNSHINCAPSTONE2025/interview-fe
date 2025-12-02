@@ -7,7 +7,7 @@ export interface Content {
   completed_sessions: number;
 }
 
-export interface ContentListResponse extends Array<Content> {}
+export type ContentListResponse = Content[];
 
 // Content 생성 요청
 export interface CreateContentRequest {

@@ -21,7 +21,7 @@ interface QAItem {
 
 export default function NewSession() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { toast: showToast } = useToast();
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<SessionMode>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -217,7 +217,7 @@ export default function NewSession() {
                   
                   <button
                     onClick={() => {
-                      toast({
+                      showToast({
                         title: "준비 중입니다",
                         description: "업데이트를 기대해주세요!",
                       });

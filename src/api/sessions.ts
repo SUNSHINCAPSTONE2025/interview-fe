@@ -37,7 +37,7 @@ export const sessionsApi = {
     });
   },
 
-  // Generate question plan (질문 생성)
+  // Generate question plan (직무 / 소프트)
   generateQuestionPlan: async (
     interviewId: number,
     data: QuestionPlanRequest
