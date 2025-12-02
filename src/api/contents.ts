@@ -1,6 +1,7 @@
 import { apiRequest } from "@/lib/api";
 import type {
   ContentListResponse,
+  ContentDetailResponse,
   CreateContentRequest,
   CreateContentResponse,
   CreateResumeRequest,
@@ -13,6 +14,13 @@ export const contentsApi = {
   // Content 목록 조회
   getAll: async (): Promise<ContentListResponse> => {
     return apiRequest<ContentListResponse>("/api/interviews/contents", {
+      method: "GET",
+    });
+  },
+
+  // Content 개별 조회 (TODO: 백엔드 API 구현 필요)
+  getById: async (id: number): Promise<ContentDetailResponse> => {
+    return apiRequest<ContentDetailResponse>(`/api/interviews/contents/${id}`, {
       method: "GET",
     });
   },

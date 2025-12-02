@@ -9,6 +9,9 @@ export interface Content {
 
 export type ContentListResponse = Content[];
 
+// Content 개별 조회 응답
+export type ContentDetailResponse = Content;
+
 // Content 생성 요청
 export interface CreateContentRequest {
   company: string;
