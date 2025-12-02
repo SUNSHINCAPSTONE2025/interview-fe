@@ -85,11 +85,13 @@ export interface UploadRecordingResponse {
   success: boolean;
   session_id: number;
   question_index: number;
+  attempt_id: number; // Attempt ID returned by backend
   video_url: string;
   audio_url: string;
   duration?: number;
   video_size?: number;
   audio_size?: number;
+  message?: string;
 }
 
 // Update session status request

@@ -38,16 +38,34 @@ export interface ProblemSection {
 
 // BE API 응답 타입 - 표정 피드백
 export interface ExpressionFeedbackResponse {
+  message: string;
   session_id: number;
+  attempt_id: number; // Attempt ID
   overall_score: number; // overall_face
-  gaze: number;
-  eye_blink: number;
-  mouth: number;
+  expression_analysis: {
+    head_eye_gaze_rate: {
+      value: number;
+      rating: string;
+    };
+    blink_stability: {
+      value: number;
+      rating: string;
+    };
+    mouth_delta: {
+      value: number;
+      rating: string;
+    };
+    fixation_metrics: {
+      MAE: number | null;
+      BCEA: number | null;
+    };
+  };
+  feedback_summary: string;
+  // Legacy fields for backward compatibility (derived from expression_analysis)
+  gaze?: number;
+  eye_blink?: number;
+  mouth?: number;
   comment?: string;
-  // BE에서 계산된 세부 지표 (선택적)
-  head_eye_gaze_rate?: number;
-  blink_stability?: number;
-  mouth_delta?: number;
 }
 
 // BE API 응답 타입 - 자세 피드백

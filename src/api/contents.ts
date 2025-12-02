@@ -35,7 +35,7 @@ export const contentsApi = {
 
   // Resume 생성 (자소서 Q&A 등록)
   createResume: async (data: CreateResumeRequest): Promise<CreateResumeResponse> => {
-    return apiRequest<CreateResumeResponse>("/api/interviews/resumes", {
+    return apiRequest<CreateResumeResponse>("/api/interviews/resume", {
       method: "POST",
       body: JSON.stringify(data),
     });

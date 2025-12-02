@@ -41,6 +41,7 @@ export default function PracticeRoom() {
   const [recordingTime, setRecordingTime] = useState(0);
   const [recordingEnded, setRecordingEnded] = useState(false);
   const [recordedBlobs, setRecordedBlobs] = useState<Blob[]>([]);
+  const [attemptIds, setAttemptIds] = useState<number[]>([]); // Store attempt IDs from uploads
   const [isUploading, setIsUploading] = useState(false);
 
   const totalQuestions = questions.length;
@@ -294,6 +295,15 @@ export default function PracticeRoom() {
 
       console.log(`Upload success for Q${questionIndex}:`, response);
 
+      // Store attempt_id for feedback
+      if (response.attempt_id) {
+        setAttemptIds(prev => {
+          const newIds = [...prev];
+          newIds[questionIndex] = response.attempt_id;
+          return newIds;
+        });
+      }
+
       toast({
         title: "녹화 저장 완료",
         description: `질문 ${questionIndex + 1}의 답변이 저장되었습니다.`,
@@ -353,7 +363,10 @@ export default function PracticeRoom() {
       }
 
       console.log(`Total recordings uploaded: ${recordedBlobs.length}`);
-      navigate(`/feedback/${id}?session_id=${sessionId}`);
+
+      // Pass attempt_ids to feedback page
+      const attemptIdsParam = attemptIds.filter(id => id).join(',');
+      navigate(`/feedback/${id}?session_id=${sessionId}&attempt_ids=${attemptIdsParam}`);
     }
   };
 

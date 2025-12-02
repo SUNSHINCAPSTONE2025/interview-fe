@@ -13,71 +13,177 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { feedbackApi } from "@/api/feedback";
 import { ApiError } from "@/lib/api";
+import type { ExpressionFeedbackResponse, PostureFeedbackResponse, VoiceFeedbackResponse } from "@/types/feedback";
 
 export default function Feedback() {
   const { id } = useParams();
   const sessionId = Number(id);
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
 
-  // 표정 피드백 조회 (동기 처리)
+  // Get attempt_ids from URL
+  const attemptIdsParam = searchParams.get("attempt_ids");
+  const attemptIds = attemptIdsParam
+    ? attemptIdsParam.split(",").map(Number).filter(Boolean)
+    : [];
+
+  // 표정 피드백 조회 (동기 처리) - 모든 attempts에 대해 병렬 조회
   // GET 요청 시 즉시 분석 수행 후 결과 반환 (예상 1-5초)
-  // 409 에러 없음 - 분석 실패 시 500 에러 발생
   const {
-    data: expressionData,
+    data: expressionDataList,
     isLoading: expressionLoading,
     error: expressionError,
   } = useQuery({
-    queryKey: ["expression-feedback", sessionId],
-    queryFn: () => feedbackApi.getExpressionFeedback(sessionId),
-    enabled: !!sessionId,
+    queryKey: ["expression-feedback", sessionId, attemptIds],
+    queryFn: async (): Promise<ExpressionFeedbackResponse[]> => {
+      if (attemptIds.length === 0) return [];
+
+      // 모든 attempts에 대해 병렬 조회
+      const promises = attemptIds.map(attemptId =>
+        feedbackApi.getExpressionFeedback(sessionId, attemptId)
+      );
+      return Promise.all(promises);
+    },
+    enabled: !!sessionId && attemptIds.length > 0,
   });
 
-  // 자세 피드백 조회 (비동기 처리)
+  // 표정 피드백 평균 계산
+  const expressionData = expressionDataList && expressionDataList.length > 0
+    ? {
+        overall_score: Math.round(
+          expressionDataList.reduce((sum, fb) => sum + fb.overall_score, 0) / expressionDataList.length
+        ),
+        gaze: Math.round(
+          expressionDataList.reduce((sum, fb) => sum + (fb.expression_analysis?.head_eye_gaze_rate?.value || 0), 0) / expressionDataList.length
+        ),
+        eye_blink: Math.round(
+          expressionDataList.reduce((sum, fb) => sum + (fb.expression_analysis?.blink_stability?.value || 0), 0) / expressionDataList.length
+        ),
+        mouth: Math.round(
+          expressionDataList.reduce((sum, fb) => sum + (fb.expression_analysis?.mouth_delta?.value || 0), 0) / expressionDataList.length
+        ),
+        comment: expressionDataList[0]?.feedback_summary,
+      }
+    : null;
+
+  // 자세 피드백 조회 (비동기 처리) - 모든 attempts에 대해 병렬 조회
   // 분석 시작(POST)과 결과 조회(GET)가 분리됨
-  // 409 에러 발생 가능 - 분석 미완료 시 "분석 시작" 버튼 표시
   const {
-    data: postureData,
+    data: postureDataList,
     isLoading: postureLoading,
     error: postureError,
   } = useQuery({
-    queryKey: ["posture-feedback", sessionId],
-    queryFn: () => feedbackApi.getPoseFeedback(sessionId),
-    enabled: !!sessionId,
-    retry: (failureCount, error) => {
-      // 409 에러(분석 미완료)는 재시도하지 않음
-      if (error instanceof ApiError && error.status === 409) {
-        return false;
-      }
-      return failureCount < 3;
+    queryKey: ["posture-feedback", sessionId, attemptIds],
+    queryFn: async (): Promise<PostureFeedbackResponse[]> => {
+      if (attemptIds.length === 0) return [];
+
+      // 폴링으로 완료 대기하는 헬퍼 함수
+      const waitForPoseAnalysis = async (attemptId: number): Promise<PostureFeedbackResponse> => {
+        const maxAttempts = 20; // 최대 1분 대기 (3초 × 20)
+        const pollInterval = 3000;
+
+        for (let i = 0; i < maxAttempts; i++) {
+          try {
+            const feedback = await feedbackApi.getPoseFeedback(sessionId, attemptId);
+            return feedback;
+          } catch (error: any) {
+            if (error instanceof ApiError && error.status === 409) {
+              // 아직 분석 중 - 대기 후 재시도
+              await new Promise(resolve => setTimeout(resolve, pollInterval));
+            } else {
+              throw error;
+            }
+          }
+        }
+        throw new Error(`Pose analysis timeout for attempt ${attemptId}`);
+      };
+
+      // 모든 attempts의 피드백 조회 (병렬)
+      const promises = attemptIds.map(attemptId => waitForPoseAnalysis(attemptId));
+      return Promise.all(promises);
     },
+    enabled: !!sessionId && attemptIds.length > 0,
+    retry: false, // 자체적으로 재시도 로직이 있으므로 비활성화
   });
 
-  // 목소리 피드백 조회 (준비 - BE 미구현이므로 비활성화)
+  // 자세 피드백 평균 계산
+  const postureData = postureDataList && postureDataList.length > 0
+    ? {
+        overall_score: Math.round(
+          postureDataList.reduce((sum, fb) => sum + fb.overall_score, 0) / postureDataList.length
+        ),
+        shoulder: Math.round(
+          postureDataList.reduce((sum, fb) => sum + fb.shoulder, 0) / postureDataList.length
+        ),
+        head: Math.round(
+          postureDataList.reduce((sum, fb) => sum + fb.head, 0) / postureDataList.length
+        ),
+        hand: Math.round(
+          postureDataList.reduce((sum, fb) => sum + fb.hand, 0) / postureDataList.length
+        ),
+        problem_sections: postureDataList[0]?.problem_sections,
+      }
+    : null;
+
+  // 목소리 피드백 조회 - 모든 attempts에 대해 병렬 조회
   const {
-    data: voiceData,
-    isLoading: voiceLoading,
-    error: voiceError,
+    data: voiceDataList,
   } = useQuery({
-    queryKey: ["voice-feedback", sessionId],
-    queryFn: () => feedbackApi.getVoiceFeedback(sessionId),
-    enabled: false, // BE 구현 완료 시 true로 변경
+    queryKey: ["voice-feedback", sessionId, attemptIds],
+    queryFn: async (): Promise<VoiceFeedbackResponse[]> => {
+      if (attemptIds.length === 0) return [];
+
+      // 모든 attempts에 대해 병렬 조회
+      const promises = attemptIds.map(attemptId =>
+        feedbackApi.getVoiceFeedback(sessionId, attemptId)
+      );
+      return Promise.all(promises);
+    },
+    enabled: false, // BE 구현 완료 시 !!sessionId && attemptIds.length > 0으로 변경
   });
 
-  // 자세 분석 시작
-  const startPoseAnalysisMutation = useMutation({
-    mutationFn: () => feedbackApi.startPoseAnalysis(sessionId),
-    onSuccess: () => {
-      // 분석 시작 후 주기적으로 결과 확인
-      const interval = setInterval(() => {
-        queryClient.invalidateQueries({ queryKey: ["posture-feedback", sessionId] });
-      }, 3000); // 3초마다 확인
+  // 목소리 피드백 평균 계산
+  const voiceData = voiceDataList && voiceDataList.length > 0
+    ? {
+        overall_score: Math.round(
+          voiceDataList.reduce((sum, fb) => sum + fb.overall_score, 0) / voiceDataList.length
+        ),
+        tremor: Math.round(
+          voiceDataList.reduce((sum, fb) => sum + fb.tremor, 0) / voiceDataList.length
+        ),
+        blank: Math.round(
+          voiceDataList.reduce((sum, fb) => sum + fb.blank, 0) / voiceDataList.length
+        ),
+        tone: Math.round(
+          voiceDataList.reduce((sum, fb) => sum + fb.tone, 0) / voiceDataList.length
+        ),
+        speed: Math.round(
+          voiceDataList.reduce((sum, fb) => sum + fb.speed, 0) / voiceDataList.length
+        ),
+        speech: voiceDataList[0]?.speech,
+      }
+    : null;
 
-      // 30초 후 중지
-      setTimeout(() => clearInterval(interval), 30000);
+  // 자세 분석 시작 (모든 attempts에 대해 병렬 시작)
+  const startPoseAnalysisMutation = useMutation({
+    mutationFn: async () => {
+      if (attemptIds.length === 0) {
+        throw new Error("No attempt IDs found");
+      }
+
+      // 모든 attempts의 자세 분석을 병렬로 시작
+      const promises = attemptIds.map(attemptId =>
+        feedbackApi.startPoseAnalysis(sessionId, attemptId)
+      );
+      return Promise.all(promises);
+    },
+    onSuccess: () => {
+      // 분석 시작 후 피드백 쿼리 다시 실행 (폴링 시작)
+      queryClient.invalidateQueries({ queryKey: ["posture-feedback", sessionId, attemptIds] });
     },
   });
 
