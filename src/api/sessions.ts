@@ -2,8 +2,7 @@ import { apiRequest } from "@/lib/api";
 import type {
   Session,
   SessionWithQuestions,
-  QuestionPlanRequest,
-  QuestionPlanResponse,
+  StartSessionRequest,
   StartSessionResponse,
   UploadRecordingResponse,
   UpdateSessionStatusRequest,
@@ -14,11 +13,15 @@ import type {
 
 export const sessionsApi = {
   // Start a new session (기본 세션 시작)
-  startSession: async (interviewId: number): Promise<StartSessionResponse> => {
+  startSession: async (
+    interviewId: number,
+    data: StartSessionRequest
+  ): Promise<StartSessionResponse> => {
     return apiRequest<StartSessionResponse>(
       `/api/interviews/${interviewId}/sessions/start`,
       {
         method: "POST",
+        body: JSON.stringify(data),
       }
     );
   },
@@ -35,20 +38,6 @@ export const sessionsApi = {
     return apiRequest<Session[]>(`/api/sessions?content_id=${contentId}`, {
       method: "GET",
     });
-  },
-
-  // Generate question plan (직무 / 소프트)
-  generateQuestionPlan: async (
-    interviewId: number,
-    data: QuestionPlanRequest
-  ): Promise<QuestionPlanResponse> => {
-    return apiRequest<QuestionPlanResponse>(
-      `/api/interviews/${interviewId}/question-plan`,
-      {
-        method: "POST",
-        body: JSON.stringify(data),
-      }
-    );
   },
 
   // Update session status (세션 상태 업데이트)
@@ -98,21 +87,32 @@ export const sessionsApi = {
     return response.json();
   },
 
-  // Upload recording (녹화 파일 업로드) - 기존 API (하위 호환성 유지)
+  // Upload recording (녹화 파일 업로드)
   uploadRecording: async (
     sessionId: number,
-    questionIndex: number,
+    questionIndex: number, // 0-based index from frontend
     blob: Blob
   ): Promise<UploadRecordingResponse> => {
     const formData = new FormData();
     formData.append('file', blob, `q${questionIndex}.webm`);
 
+    // Get access token from localStorage
+    const accessToken = localStorage.getItem('access_token');
+
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+
+    // Convert to 1-based index for backend API
+    const apiQuestionIndex = questionIndex + 1;
+
     const response = await fetch(
-      `/api/sessions/${sessionId}/recordings/${questionIndex}`,
+      `${apiBaseUrl}/api/sessions/${sessionId}/recordings/${apiQuestionIndex}`,
       {
         method: "POST",
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+        },
         body: formData,
-        // FormData는 Content-Type을 자동으로 설정하므로 headers 불필요
+        // FormData는 Content-Type을 자동으로 설정하므로 Content-Type 헤더는 불필요
       }
     );
 

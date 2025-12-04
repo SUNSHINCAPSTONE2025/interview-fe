@@ -14,7 +14,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { feedbackApi } from "@/api/feedback";
 import { ApiError } from "@/lib/api";
 import type { ExpressionFeedbackResponse, PostureFeedbackResponse, VoiceFeedbackResponse } from "@/types/feedback";
@@ -23,7 +23,6 @@ export default function Feedback() {
   const { id } = useParams();
   const sessionId = Number(id);
   const [searchParams] = useSearchParams();
-  const queryClient = useQueryClient();
 
   // Get attempt_ids from URL
   const attemptIdsParam = searchParams.get("attempt_ids");
@@ -70,8 +69,8 @@ export default function Feedback() {
       }
     : null;
 
-  // 자세 피드백 조회 (비동기 처리) - 모든 attempts에 대해 병렬 조회
-  // 분석 시작(POST)과 결과 조회(GET)가 분리됨
+  // 자세 피드백 조회 (동기 처리) - 모든 attempts에 대해 병렬 조회
+  // GET 요청 시 즉시 분석 수행 후 결과 반환 (표정과 동일)
   const {
     data: postureDataList,
     isLoading: postureLoading,
@@ -81,33 +80,13 @@ export default function Feedback() {
     queryFn: async (): Promise<PostureFeedbackResponse[]> => {
       if (attemptIds.length === 0) return [];
 
-      // 폴링으로 완료 대기하는 헬퍼 함수
-      const waitForPoseAnalysis = async (attemptId: number): Promise<PostureFeedbackResponse> => {
-        const maxAttempts = 20; // 최대 1분 대기 (3초 × 20)
-        const pollInterval = 3000;
-
-        for (let i = 0; i < maxAttempts; i++) {
-          try {
-            const feedback = await feedbackApi.getPoseFeedback(sessionId, attemptId);
-            return feedback;
-          } catch (error: any) {
-            if (error instanceof ApiError && error.status === 409) {
-              // 아직 분석 중 - 대기 후 재시도
-              await new Promise(resolve => setTimeout(resolve, pollInterval));
-            } else {
-              throw error;
-            }
-          }
-        }
-        throw new Error(`Pose analysis timeout for attempt ${attemptId}`);
-      };
-
-      // 모든 attempts의 피드백 조회 (병렬)
-      const promises = attemptIds.map(attemptId => waitForPoseAnalysis(attemptId));
+      // 모든 attempts에 대해 병렬 조회
+      const promises = attemptIds.map(attemptId =>
+        feedbackApi.getPoseFeedback(sessionId, attemptId)
+      );
       return Promise.all(promises);
     },
     enabled: !!sessionId && attemptIds.length > 0,
-    retry: false, // 자체적으로 재시도 로직이 있으므로 비활성화
   });
 
   // 자세 피드백 평균 계산
@@ -129,9 +108,12 @@ export default function Feedback() {
       }
     : null;
 
-  // 목소리 피드백 조회 - 모든 attempts에 대해 병렬 조회
+  // 목소리 피드백 조회 (동기 처리) - 모든 attempts에 대해 병렬 조회
+  // GET 요청 시 즉시 분석 수행 후 결과 반환
   const {
     data: voiceDataList,
+    isLoading: voiceLoading,
+    error: voiceError,
   } = useQuery({
     queryKey: ["voice-feedback", sessionId, attemptIds],
     queryFn: async (): Promise<VoiceFeedbackResponse[]> => {
@@ -143,7 +125,7 @@ export default function Feedback() {
       );
       return Promise.all(promises);
     },
-    enabled: false, // BE 구현 완료 시 !!sessionId && attemptIds.length > 0으로 변경
+    enabled: !!sessionId && attemptIds.length > 0, // 활성화
   });
 
   // 목소리 피드백 평균 계산
@@ -168,31 +150,8 @@ export default function Feedback() {
       }
     : null;
 
-  // 자세 분석 시작 (모든 attempts에 대해 병렬 시작)
-  const startPoseAnalysisMutation = useMutation({
-    mutationFn: async () => {
-      if (attemptIds.length === 0) {
-        throw new Error("No attempt IDs found");
-      }
-
-      // 모든 attempts의 자세 분석을 병렬로 시작
-      const promises = attemptIds.map(attemptId =>
-        feedbackApi.startPoseAnalysis(sessionId, attemptId)
-      );
-      return Promise.all(promises);
-    },
-    onSuccess: () => {
-      // 분석 시작 후 피드백 쿼리 다시 실행 (폴링 시작)
-      queryClient.invalidateQueries({ queryKey: ["posture-feedback", sessionId, attemptIds] });
-    },
-  });
-
   // 로딩 상태
-  const isLoading = expressionLoading || postureLoading;
-
-  // 자세 분석 상태 확인
-  const isPoseAnalyzing =
-    postureError instanceof ApiError && postureError.status === 409;
+  const isLoading = expressionLoading || postureLoading || voiceLoading;
 
   // 전체 점수 계산 (표정 + 자세 + 목소리 평균)
   const calculateOverallScore = () => {
@@ -224,7 +183,8 @@ export default function Feedback() {
   }
 
   // 에러 화면
-  if (expressionError && !isPoseAnalyzing) {
+  if (expressionError || postureError || voiceError) {
+    const error = expressionError || postureError || voiceError;
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
         <Card className="max-w-md">
@@ -232,8 +192,8 @@ export default function Feedback() {
             <AlertCircle className="h-12 w-12 mx-auto text-destructive" />
             <h2 className="text-xl font-bold">피드백을 불러올 수 없습니다</h2>
             <p className="text-muted-foreground">
-              {expressionError instanceof ApiError
-                ? expressionError.message
+              {error instanceof ApiError
+                ? error.message
                 : "알 수 없는 오류가 발생했습니다."}
             </p>
             <Button asChild>
@@ -311,36 +271,11 @@ export default function Feedback() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {isPoseAnalyzing ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    분석 준비 중...
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={() => startPoseAnalysisMutation.mutate()}
-                    disabled={startPoseAnalysisMutation.isPending}
-                  >
-                    {startPoseAnalysisMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        분석 중...
-                      </>
-                    ) : (
-                      "분석 시작"
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div className="text-3xl font-bold mb-3">
-                    {postureData?.overall_score ?? 0}점
-                  </div>
-                  <Progress value={postureData?.overall_score ?? 0} className="h-2" />
-                  <p className="text-xs text-muted-foreground mt-2">어깨 • 고개 • 손</p>
-                </>
-              )}
+              <div className="text-3xl font-bold mb-3">
+                {postureData?.overall_score ?? 0}점
+              </div>
+              <Progress value={postureData?.overall_score ?? 0} className="h-2" />
+              <p className="text-xs text-muted-foreground mt-2">어깨 • 고개 • 손</p>
             </CardContent>
           </Card>
         </div>
@@ -355,9 +290,7 @@ export default function Feedback() {
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="expression">표정</TabsTrigger>
                 <TabsTrigger value="posture">자세</TabsTrigger>
-                <TabsTrigger value="voice" disabled={!voiceData}>
-                  목소리 {!voiceData && "(준비 중)"}
-                </TabsTrigger>
+                <TabsTrigger value="voice">목소리</TabsTrigger>
               </TabsList>
 
               {/* 표정 탭 */}
@@ -433,29 +366,7 @@ export default function Feedback() {
 
               {/* 자세 탭 */}
               <TabsContent value="posture">
-                {isPoseAnalyzing ? (
-                  <div className="text-center py-8 space-y-4">
-                    <Loader2 className="h-12 w-12 animate-spin mx-auto text-primary" />
-                    <div>
-                      <p className="text-muted-foreground mb-4">
-                        자세 분석이 준비되지 않았습니다.
-                      </p>
-                      <Button
-                        onClick={() => startPoseAnalysisMutation.mutate()}
-                        disabled={startPoseAnalysisMutation.isPending}
-                      >
-                        {startPoseAnalysisMutation.isPending ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            분석 중...
-                          </>
-                        ) : (
-                          "자세 분석 시작"
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                ) : postureData ? (
+                {postureData ? (
                   <div className="space-y-4">
                     <Card className="bg-primary/10 border-primary/20">
                       <CardContent className="p-6">
