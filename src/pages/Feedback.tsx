@@ -20,9 +20,12 @@ import { ApiError } from "@/lib/api";
 import type { ExpressionFeedbackResponse, PostureFeedbackResponse, VoiceFeedbackResponse } from "@/types/feedback";
 
 export default function Feedback() {
-  const { id } = useParams();
-  const sessionId = Number(id);
+  const { id } = useParams(); // content_id or session_id (depends on caller)
   const [searchParams] = useSearchParams();
+
+  // Get session_id from query parameter (priority) or URL path (fallback)
+  const sessionIdParam = searchParams.get("session_id");
+  const sessionId = sessionIdParam ? Number(sessionIdParam) : Number(id);
 
   // Get attempt_ids from URL
   const attemptIdsParam = searchParams.get("attempt_ids");
