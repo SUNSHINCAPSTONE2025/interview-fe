@@ -23,15 +23,18 @@ export interface CreateContentRequest {
 
 // Content 생성 응답
 export interface CreateContentResponse {
-  id: number;
-  user_id: string;
-  company: string;
-  role: string;
-  role_category: number | null;
-  interview_date: string | null;
-  jd_text: string | null;
-  created_at: string;
-  updated_at: string | null;
+  message: string;
+  content: {
+    id: number;
+    user_id?: string;
+    company: string;
+    role: string;
+    role_category: number | null;
+    interview_date: string | null;
+    jd_text: string | null;
+    created_at: string;
+    updated_at?: string | null;
+  };
 }
 
 // Resume 항목
