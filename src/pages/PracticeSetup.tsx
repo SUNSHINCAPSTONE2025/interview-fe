@@ -34,8 +34,9 @@ export default function PracticeSetup() {
   // Get practice type from URL params
   const practiceType = searchParams.get("type") as PracticeType;
 
-  // Get questions from location state (passed from PracticeGuide)
-  const questions = location.state?.questions as string[] | undefined;
+  // Get session data from location state (passed from PracticeGuide)
+  const sessionId = location.state?.sessionId as number | undefined;
+  const questions = location.state?.questions;
   const plan = location.state?.plan;
 
   const checkCameraPermission = async () => {
@@ -67,45 +68,29 @@ export default function PracticeSetup() {
     micPermission === 'granted' &&
     acknowledged;
 
-  // Handle interview start - start session and navigate
+  // Handle interview start - navigate to practice room
   const handleStartInterview = async () => {
-    if (!id || !practiceType || !questions) {
+    if (!id || !practiceType || !questions || !sessionId) {
       toast({
         title: "오류",
-        description: "면접 정보가 올바르지 않습니다.",
+        description: "세션 정보가 올바르지 않습니다.",
         variant: "destructive",
       });
       return;
     }
 
-    setIsCreatingSession(true);
+    // PracticeGuide에서 이미 세션이 생성되었으므로 바로 면접 실행 페이지로 이동
+    toast({
+      title: "면접 시작",
+      description: `${questions.length}개의 질문으로 면접을 시작합니다.`,
+    });
 
-    try {
-      const interviewId = parseInt(id);
-      const response = await sessionsApi.startSession(interviewId);
-
-      // 세션 생성 성공 - 생성된 세션 ID로 면접 시작
-      toast({
-        title: "면접 세션 생성 완료",
-        description: `${questions.length}개의 질문으로 면접을 시작합니다.`,
-      });
-
-      // 생성된 세션 ID와 질문을 가지고 면접 실행 페이지로 이동
-      navigate(`/practice/${id}/run?session_id=${response.session_id}`, {
-        state: {
-          questions,
-          plan
-        }
-      });
-    } catch (error) {
-      console.error("Failed to start session:", error);
-      toast({
-        title: "세션 생성 실패",
-        description: "면접 세션을 생성하는 중 오류가 발생했습니다. 다시 시도해주세요.",
-        variant: "destructive",
-      });
-      setIsCreatingSession(false);
-    }
+    navigate(`/practice/${id}/run?session_id=${sessionId}`, {
+      state: {
+        questions,
+        plan
+      }
+    });
   };
 
   const notices = [

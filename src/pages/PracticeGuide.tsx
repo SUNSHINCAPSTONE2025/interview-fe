@@ -50,29 +50,29 @@ export default function PracticeGuide() {
     try {
       const interviewId = parseInt(id);
 
-      // 질문 생성 API 호출
-      const response = await sessionsApi.generateQuestionPlan(interviewId, {
-        mode: practiceType,
+      // 세션 시작 API 호출 (질문 포함)
+      const response = await sessionsApi.startSession(interviewId, {
+        practice_type: practiceType,
         count: 5, // 5개 고정
       });
 
       toast({
-        title: "질문 생성 완료",
-        description: `${response.generated_questions.length}개의 질문이 생성되었습니다.`,
+        title: "세션 시작",
+        description: `${response.questions.length}개의 질문으로 세션이 시작되었습니다.`,
       });
 
-      // 생성된 질문을 가지고 다음 페이지로 이동
+      // 세션 ID와 질문을 가지고 다음 페이지로 이동
       navigate(`/practice/${id}/setup?type=${practiceType}`, {
         state: {
-          questions: response.generated_questions,
-          plan: response.plan
+          sessionId: response.session_id,
+          questions: response.questions,
         }
       });
     } catch (error) {
-      console.error("Failed to generate questions:", error);
+      console.error("Failed to start session:", error);
       toast({
-        title: "질문 생성 실패",
-        description: "질문을 생성하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+        title: "세션 시작 실패",
+        description: "세션을 시작하는 중 오류가 발생했습니다. 다시 시도해주세요.",
         variant: "destructive",
       });
       setIsGeneratingQuestions(false);

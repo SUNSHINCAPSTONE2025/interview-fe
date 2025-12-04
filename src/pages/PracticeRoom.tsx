@@ -16,6 +16,7 @@ import {
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { sessionsApi } from "@/api/sessions";
+import { SessionQuestion } from "@/types/session";
 
 export default function PracticeRoom() {
   const { id } = useParams();
@@ -25,7 +26,7 @@ export default function PracticeRoom() {
   const { toast } = useToast();
 
   // Get data from location state
-  const questions = (location.state?.questions as string[]) || [];
+  const questions = (location.state?.questions as SessionQuestion[]) || [];
   const sessionId = searchParams.get("session_id");
 
   // Refs
@@ -43,6 +44,7 @@ export default function PracticeRoom() {
   const [recordedBlobs, setRecordedBlobs] = useState<Blob[]>([]);
   const [attemptIds, setAttemptIds] = useState<number[]>([]); // Store attempt IDs from uploads
   const [isUploading, setIsUploading] = useState(false);
+  const [recordingStartTime, setRecordingStartTime] = useState<string | null>(null); // Track recording start time
 
   const totalQuestions = questions.length;
   const maxRecordingTime = 60; // 1분 (60초)
@@ -152,6 +154,7 @@ export default function PracticeRoom() {
     setThinkingTime(60);
     setRecordingTime(0);
     setRecordingEnded(false);
+    setRecordingStartTime(null);
   }, [currentQuestion]);
 
   // Thinking time countdown (60초)
@@ -164,6 +167,7 @@ export default function PracticeRoom() {
       setIsThinking(false);
       setIsRecording(true);
       setRecordingTime(0);
+      setRecordingStartTime(new Date().toISOString());
 
       // 녹화 시작
       if (stream && !mediaRecorderRef.current) {
@@ -232,6 +236,7 @@ export default function PracticeRoom() {
     setIsThinking(false);
     setIsRecording(true);
     setRecordingTime(0);
+    setRecordingStartTime(new Date().toISOString());
 
     // 녹화 시작
     try {
@@ -413,7 +418,7 @@ export default function PracticeRoom() {
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground mb-2">현재 질문</h3>
                 <p className="text-lg font-semibold leading-relaxed">
-                  {questions[currentQuestion] || "질문을 불러오는 중..."}
+                  {questions[currentQuestion]?.text || "질문을 불러오는 중..."}
                 </p>
               </div>
 
