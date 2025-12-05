@@ -14,11 +14,11 @@ import type {
 export const sessionsApi = {
   // Start a new session (기본 세션 시작)
   startSession: async (
-    interviewId: number,
+    contentId: number,
     data: StartSessionRequest
   ): Promise<StartSessionResponse> => {
     return apiRequest<StartSessionResponse>(
-      `/api/interviews/${interviewId}/sessions/start`,
+      `/api/sessions/${contentId}/start`,
       {
         method: "POST",
         body: JSON.stringify(data),

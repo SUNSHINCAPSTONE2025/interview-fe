@@ -48,10 +48,10 @@ export default function PracticeGuide() {
     setIsGeneratingQuestions(true);
 
     try {
-      const interviewId = parseInt(id);
+      const contentId = parseInt(id);
 
       // 세션 시작 API 호출 (질문 포함)
-      const response = await sessionsApi.startSession(interviewId, {
+      const response = await sessionsApi.startSession(contentId, {
         practice_type: practiceType,
         count: 5, // 5개 고정
       });
