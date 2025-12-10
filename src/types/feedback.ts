@@ -104,3 +104,43 @@ export interface StartPoseAnalysisResponse {
   message: string;
   status?: string;
 }
+
+// STT API 요청
+export interface STTRequest {
+  attempt_id: number;
+}
+
+// STT API 응답
+export interface STTResponse {
+  session_id: number;
+  attempt_id: number;
+  transcript: string;
+}
+
+// 답변 평가 API 요청
+export interface AnswerEvalRequest {
+  answer_text: string;
+}
+
+// 답변 평가 API 응답
+export interface AnswerEvalResponse {
+  session_id: number;
+  attempt_id: number;
+  result: {
+    overall_summary: string;
+    // 추가 필드가 있을 수 있음
+  };
+}
+
+// 답변 평가 조회 API 응답 (GET)
+export interface AttemptFeedbackResponse {
+  attempt_id: number;
+  question_text: string | null;
+  stt_text: string | null;
+  evaluation_comment: string | null;
+  scores: {
+    overall_voice: number | null;
+    overall_face: number | null;
+    overall_pose: number | null;
+  };
+}

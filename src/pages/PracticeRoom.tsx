@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,6 +16,8 @@ import {
 import { useParams, useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { sessionsApi } from "@/api/sessions";
+import { sttApi } from "@/api/stt";
+import { answerEvalApi } from "@/api/answerEval";
 import { SessionQuestion } from "@/types/session";
 
 export default function PracticeRoom() {
@@ -45,6 +47,8 @@ export default function PracticeRoom() {
   const [attemptIds, setAttemptIds] = useState<number[]>([]); // Store attempt IDs from uploads
   const [isUploading, setIsUploading] = useState(false);
   const [recordingStartTime, setRecordingStartTime] = useState<string | null>(null); // Track recording start time
+  const [isProcessingFeedback, setIsProcessingFeedback] = useState(false);
+  const [feedbackProgress, setFeedbackProgress] = useState({ current: 0, total: 0 });
 
   const totalQuestions = questions.length;
   const maxRecordingTime = 60; // 1분 (60초)
@@ -330,6 +334,51 @@ export default function PracticeRoom() {
     }
   };
 
+  // STT 및 답변 평가 처리
+  const processFeedback = async () => {
+    if (!sessionId) return;
+
+    const validAttemptIds = attemptIds.filter(id => id);
+    if (validAttemptIds.length === 0) return;
+
+    setIsProcessingFeedback(true);
+    setFeedbackProgress({ current: 0, total: validAttemptIds.length });
+
+    for (let i = 0; i < validAttemptIds.length; i++) {
+      const attemptId = validAttemptIds[i];
+
+      try {
+        setFeedbackProgress({ current: i + 1, total: validAttemptIds.length });
+
+        // Step 1: STT 처리
+        console.log(`[질문 ${i + 1}] STT 처리 시작...`);
+        const sttResponse = await sttApi.processSpeechToText(parseInt(sessionId), {
+          attempt_id: attemptId,
+        });
+        console.log(`[질문 ${i + 1}] STT 완료: "${sttResponse.transcript}"`);
+
+        // Step 2: 답변 평가
+        console.log(`[질문 ${i + 1}] 답변 평가 시작...`);
+        await answerEvalApi.evaluateAnswer(
+          parseInt(sessionId),
+          attemptId,
+          { answer_text: sttResponse.transcript }
+        );
+        console.log(`[질문 ${i + 1}] 답변 평가 완료`);
+
+      } catch (error) {
+        console.error(`[질문 ${i + 1}] 처리 실패:`, error);
+        toast({
+          title: `질문 ${i + 1} 처리 실패`,
+          description: "일부 피드백을 생성할 수 없습니다.",
+          variant: "destructive",
+        });
+      }
+    }
+
+    setIsProcessingFeedback(false);
+  };
+
   const handleNext = async () => {
     // 현재 질문의 녹화 업로드
     if (recordedBlobs[currentQuestion]) {
@@ -354,14 +403,19 @@ export default function PracticeRoom() {
     if (currentQuestion < totalQuestions - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      // 마지막 질문 완료 - 세션을 done으로 변경
+      // 마지막 질문 완료 - STT 및 답변 평가 처리
       if (sessionId) {
         try {
+          // 세션을 done으로 변경
           await sessionsApi.updateSessionStatus(parseInt(sessionId), {
             status: "done",
             ended_at: new Date().toISOString(),
           });
           console.log(`Session ${sessionId} completed successfully`);
+
+          // STT 및 답변 평가 처리
+          await processFeedback();
+
         } catch (error) {
           console.error("Failed to complete session:", error);
         }
@@ -380,6 +434,32 @@ export default function PracticeRoom() {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // 피드백 처리 중 화면
+  if (isProcessingFeedback) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center space-y-4">
+            <Loader2 className="h-16 w-16 animate-spin mx-auto text-primary" />
+            <h2 className="text-2xl font-bold">답변을 분석하는 중...</h2>
+            <p className="text-muted-foreground">
+              질문 {feedbackProgress.current} / {feedbackProgress.total}
+            </p>
+            <Progress
+              value={(feedbackProgress.current / feedbackProgress.total) * 100}
+              className="w-full"
+            />
+            <p className="text-sm text-muted-foreground">
+              음성을 텍스트로 변환하고 답변을 평가하고 있습니다.
+              <br />
+              잠시만 기다려주세요.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">

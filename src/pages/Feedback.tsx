@@ -12,12 +12,19 @@ import {
   Mic,
   Loader2,
   AlertCircle,
+  MessageSquare,
 } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { feedbackApi } from "@/api/feedback";
+import { answerEvalApi } from "@/api/answerEval";
 import { ApiError } from "@/lib/api";
-import type { ExpressionFeedbackResponse, PostureFeedbackResponse, VoiceFeedbackResponse } from "@/types/feedback";
+import type {
+  ExpressionFeedbackResponse,
+  PostureFeedbackResponse,
+  VoiceFeedbackResponse,
+  AttemptFeedbackResponse,
+} from "@/types/feedback";
 
 export default function Feedback() {
   const { id } = useParams(); // content_id or session_id (depends on caller)
@@ -153,8 +160,27 @@ export default function Feedback() {
       }
     : null;
 
+  // 답변 평가 조회 (텍스트 탭용) - 모든 attempts에 대해 병렬 조회
+  const {
+    data: textFeedbackList,
+    isLoading: textLoading,
+    error: textError,
+  } = useQuery({
+    queryKey: ["text-feedback", sessionId, attemptIds],
+    queryFn: async (): Promise<AttemptFeedbackResponse[]> => {
+      if (attemptIds.length === 0) return [];
+
+      // 모든 attempts에 대해 병렬 조회
+      const promises = attemptIds.map(attemptId =>
+        answerEvalApi.getAttemptFeedback(sessionId, attemptId)
+      );
+      return Promise.all(promises);
+    },
+    enabled: !!sessionId && attemptIds.length > 0,
+  });
+
   // 로딩 상태
-  const isLoading = expressionLoading || postureLoading || voiceLoading;
+  const isLoading = expressionLoading || postureLoading || voiceLoading || textLoading;
 
   // 전체 점수 계산 (표정 + 자세 + 목소리 평균)
   const calculateOverallScore = () => {
@@ -186,8 +212,8 @@ export default function Feedback() {
   }
 
   // 에러 화면
-  if (expressionError || postureError || voiceError) {
-    const error = expressionError || postureError || voiceError;
+  if (expressionError || postureError || voiceError || textError) {
+    const error = expressionError || postureError || voiceError || textError;
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
         <Card className="max-w-md">
@@ -289,12 +315,126 @@ export default function Feedback() {
             <CardTitle>세부 피드백</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="expression" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-3">
+            <Tabs defaultValue="text" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="text">텍스트</TabsTrigger>
                 <TabsTrigger value="expression">표정</TabsTrigger>
                 <TabsTrigger value="posture">자세</TabsTrigger>
                 <TabsTrigger value="voice">목소리</TabsTrigger>
               </TabsList>
+
+              {/* 텍스트 탭 */}
+              <TabsContent value="text">
+                {textFeedbackList && textFeedbackList.length > 0 ? (
+                  <div className="space-y-6">
+                    {textFeedbackList.map((feedback, index) => (
+                      <Card key={feedback.attempt_id} className="bg-muted/30 overflow-hidden">
+                        <CardHeader className="bg-primary/5 border-b">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge variant="outline">질문 {index + 1}</Badge>
+                                {feedback.scores.overall_face !== null && (
+                                  <Badge variant="secondary">
+                                    종합 점수:{" "}
+                                    {Math.round(
+                                      ((feedback.scores.overall_face || 0) +
+                                        (feedback.scores.overall_pose || 0) +
+                                        (feedback.scores.overall_voice || 0)) /
+                                        3
+                                    )}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-lg font-semibold leading-relaxed">
+                                {feedback.question_text || "질문을 불러올 수 없습니다"}
+                              </p>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-4">
+                          {/* STT 텍스트 */}
+                          <div>
+                            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                              <Mic className="h-4 w-4 text-primary" />
+                              답변 내용 (음성 인식)
+                            </h4>
+                            <div className="bg-background/50 rounded-lg p-4 border border-border">
+                              {feedback.stt_text ? (
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                  {feedback.stt_text}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground italic">
+                                  음성 인식 결과가 없습니다
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 답변 평가 */}
+                          <div>
+                            <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                              <MessageSquare className="h-4 w-4 text-primary" />
+                              답변 평가
+                            </h4>
+                            <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
+                              {feedback.evaluation_comment ? (
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                                  {feedback.evaluation_comment}
+                                </p>
+                              ) : (
+                                <p className="text-sm text-muted-foreground italic">
+                                  평가 결과가 아직 생성되지 않았습니다
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* 세부 점수 */}
+                          {(feedback.scores.overall_face !== null ||
+                            feedback.scores.overall_pose !== null ||
+                            feedback.scores.overall_voice !== null) && (
+                            <div>
+                              <h4 className="text-sm font-semibold mb-3">세부 점수</h4>
+                              <div className="grid grid-cols-3 gap-3">
+                                {feedback.scores.overall_face !== null && (
+                                  <div className="bg-background/50 rounded-lg p-3 text-center border border-border">
+                                    <p className="text-xs text-muted-foreground mb-1">표정</p>
+                                    <p className="text-2xl font-bold text-primary">
+                                      {Math.round(feedback.scores.overall_face)}
+                                    </p>
+                                  </div>
+                                )}
+                                {feedback.scores.overall_pose !== null && (
+                                  <div className="bg-background/50 rounded-lg p-3 text-center border border-border">
+                                    <p className="text-xs text-muted-foreground mb-1">자세</p>
+                                    <p className="text-2xl font-bold text-primary">
+                                      {Math.round(feedback.scores.overall_pose)}
+                                    </p>
+                                  </div>
+                                )}
+                                {feedback.scores.overall_voice !== null && (
+                                  <div className="bg-background/50 rounded-lg p-3 text-center border border-border">
+                                    <p className="text-xs text-muted-foreground mb-1">목소리</p>
+                                    <p className="text-2xl font-bold text-primary">
+                                      {Math.round(feedback.scores.overall_voice)}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    텍스트 피드백 데이터가 없습니다.
+                  </div>
+                )}
+              </TabsContent>
 
               {/* 표정 탭 */}
               <TabsContent value="expression">
