@@ -18,6 +18,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { feedbackApi } from "@/api/feedback";
 import { answerEvalApi } from "@/api/answerEval";
+import { sessionsApi } from "@/api/sessions";
 import { ApiError } from "@/lib/api";
 import type {
   ExpressionFeedbackResponse,
@@ -39,6 +40,13 @@ export default function Feedback() {
   const attemptIds = attemptIdsParam
     ? attemptIdsParam.split(",").map(Number).filter(Boolean)
     : [];
+
+  // 세션 정보 조회 (질문 목록 포함)
+  const { data: sessionData } = useQuery({
+    queryKey: ["session", sessionId],
+    queryFn: () => sessionsApi.getById(sessionId),
+    enabled: !!sessionId,
+  });
 
   // 표정 피드백 조회 (동기 처리) - 모든 attempts에 대해 병렬 조회
   // GET 요청 시 즉시 분석 수행 후 결과 반환 (예상 1-5초)
@@ -66,15 +74,9 @@ export default function Feedback() {
         overall_score: Math.round(
           expressionDataList.reduce((sum, fb) => sum + fb.overall_score, 0) / expressionDataList.length
         ),
-        gaze: Math.round(
-          expressionDataList.reduce((sum, fb) => sum + (fb.expression_analysis?.head_eye_gaze_rate?.value || 0), 0) / expressionDataList.length
-        ),
-        eye_blink: Math.round(
-          expressionDataList.reduce((sum, fb) => sum + (fb.expression_analysis?.blink_stability?.value || 0), 0) / expressionDataList.length
-        ),
-        mouth: Math.round(
-          expressionDataList.reduce((sum, fb) => sum + (fb.expression_analysis?.mouth_delta?.value || 0), 0) / expressionDataList.length
-        ),
+        gaze_rating: expressionDataList[0]?.expression_analysis?.head_eye_gaze_rate?.rating || "-",
+        eye_blink_rating: expressionDataList[0]?.expression_analysis?.blink_stability?.rating || "-",
+        mouth_rating: expressionDataList[0]?.expression_analysis?.mouth_delta?.rating || "-",
         comment: expressionDataList[0]?.feedback_summary,
       }
     : null;
@@ -327,31 +329,26 @@ export default function Feedback() {
               <TabsContent value="text">
                 {textFeedbackList && textFeedbackList.length > 0 ? (
                   <div className="space-y-6">
-                    {textFeedbackList.map((feedback, index) => (
-                      <Card key={feedback.attempt_id} className="bg-muted/30 overflow-hidden">
-                        <CardHeader className="bg-primary/5 border-b">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-2">
-                                <Badge variant="outline">질문 {index + 1}</Badge>
-                                {feedback.scores.overall_face !== null && (
-                                  <Badge variant="secondary">
-                                    종합 점수:{" "}
-                                    {Math.round(
-                                      ((feedback.scores.overall_face || 0) +
-                                        (feedback.scores.overall_pose || 0) +
-                                        (feedback.scores.overall_voice || 0)) /
-                                        3
-                                    )}
-                                  </Badge>
-                                )}
+                    {textFeedbackList.map((feedback, index) => {
+                      // 세션 질문 데이터에서 해당 질문 찾기 (순서 기반)
+                      const questionText = feedback.question_text ||
+                        sessionData?.questions?.[index]?.text ||
+                        "질문을 불러올 수 없습니다";
+
+                      return (
+                        <Card key={feedback.attempt_id} className="bg-muted/30 overflow-hidden">
+                          <CardHeader className="bg-primary/5 border-b">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline">질문 {index + 1}</Badge>
+                                </div>
+                                <p className="text-lg font-semibold leading-relaxed">
+                                  {questionText}
+                                </p>
                               </div>
-                              <p className="text-lg font-semibold leading-relaxed">
-                                {feedback.question_text || "질문을 불러올 수 없습니다"}
-                              </p>
                             </div>
-                          </div>
-                        </CardHeader>
+                          </CardHeader>
                         <CardContent className="pt-6 space-y-4">
                           {/* STT 텍스트 */}
                           <div>
@@ -390,44 +387,10 @@ export default function Feedback() {
                               )}
                             </div>
                           </div>
-
-                          {/* 세부 점수 */}
-                          {(feedback.scores.overall_face !== null ||
-                            feedback.scores.overall_pose !== null ||
-                            feedback.scores.overall_voice !== null) && (
-                            <div>
-                              <h4 className="text-sm font-semibold mb-3">세부 점수</h4>
-                              <div className="grid grid-cols-3 gap-3">
-                                {feedback.scores.overall_face !== null && (
-                                  <div className="bg-background/50 rounded-lg p-3 text-center border border-border">
-                                    <p className="text-xs text-muted-foreground mb-1">표정</p>
-                                    <p className="text-2xl font-bold text-primary">
-                                      {Math.round(feedback.scores.overall_face)}
-                                    </p>
-                                  </div>
-                                )}
-                                {feedback.scores.overall_pose !== null && (
-                                  <div className="bg-background/50 rounded-lg p-3 text-center border border-border">
-                                    <p className="text-xs text-muted-foreground mb-1">자세</p>
-                                    <p className="text-2xl font-bold text-primary">
-                                      {Math.round(feedback.scores.overall_pose)}
-                                    </p>
-                                  </div>
-                                )}
-                                {feedback.scores.overall_voice !== null && (
-                                  <div className="bg-background/50 rounded-lg p-3 text-center border border-border">
-                                    <p className="text-xs text-muted-foreground mb-1">목소리</p>
-                                    <p className="text-2xl font-bold text-primary">
-                                      {Math.round(feedback.scores.overall_voice)}
-                                    </p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
                         </CardContent>
                       </Card>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
@@ -438,67 +401,83 @@ export default function Feedback() {
 
               {/* 표정 탭 */}
               <TabsContent value="expression">
-                {expressionData ? (
-                  <div className="space-y-4">
-                    <Card className="bg-primary/10 border-primary/20">
-                      <CardContent className="p-6">
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground mb-2">표정 총 점수</p>
-                          <div className="text-5xl font-bold text-primary">
-                            {expressionData.overall_score}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                {expressionDataList && expressionDataList.length > 0 ? (
+                  <div className="space-y-6">
+                    {expressionDataList.map((feedback, index) => {
+                      const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
 
-                    <h3 className="font-semibold text-lg">세부 지표</h3>
+                      return (
+                        <Card key={feedback.attempt_id} className="bg-muted/30 overflow-hidden">
+                          <CardHeader className="bg-primary/5 border-b">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline">질문 {index + 1}</Badge>
+                                  <Badge variant="secondary">
+                                    총점: {Math.round(feedback.overall_score)}
+                                  </Badge>
+                                </div>
+                                <p className="text-lg font-semibold leading-relaxed">
+                                  {questionText}
+                                </p>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-6 space-y-4">
+                            {/* 세부 지표 */}
+                            <div>
+                              <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
+                              <div className="space-y-2">
+                                <Card className="bg-background/50">
+                                  <CardContent className="p-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-medium">시선</span>
+                                      <Badge variant="secondary">
+                                        {feedback.expression_analysis?.head_eye_gaze_rate?.rating || "-"}
+                                      </Badge>
+                                    </div>
+                                  </CardContent>
+                                </Card>
 
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">시선</span>
-                          <span className="text-xl font-bold text-primary">
-                            {expressionData.gaze}점
-                          </span>
-                        </div>
-                        <Progress value={expressionData.gaze} className="h-2" />
-                      </CardContent>
-                    </Card>
+                                <Card className="bg-background/50">
+                                  <CardContent className="p-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-medium">눈 깜빡임</span>
+                                      <Badge variant="secondary">
+                                        {feedback.expression_analysis?.blink_stability?.rating || "-"}
+                                      </Badge>
+                                    </div>
+                                  </CardContent>
+                                </Card>
 
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">눈 깜빡임</span>
-                          <span className="text-xl font-bold text-primary">
-                            {expressionData.eye_blink}점
-                          </span>
-                        </div>
-                        <Progress value={expressionData.eye_blink} className="h-2" />
-                      </CardContent>
-                    </Card>
+                                <Card className="bg-background/50">
+                                  <CardContent className="p-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-medium">입꼬리</span>
+                                      <Badge variant="secondary">
+                                        {feedback.expression_analysis?.mouth_delta?.rating || "-"}
+                                      </Badge>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            </div>
 
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">입꼬리</span>
-                          <span className="text-xl font-bold text-primary">
-                            {expressionData.mouth}점
-                          </span>
-                        </div>
-                        <Progress value={expressionData.mouth} className="h-2" />
-                      </CardContent>
-                    </Card>
-
-                    {expressionData.comment && (
-                      <Card className="bg-muted/30">
-                        <CardContent className="p-4">
-                          <h4 className="font-semibold mb-2">코멘트</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {expressionData.comment}
-                          </p>
-                        </CardContent>
-                      </Card>
-                    )}
+                            {/* 코멘트 */}
+                            {feedback.feedback_summary && (
+                              <div>
+                                <h4 className="text-sm font-semibold mb-3">코멘트</h4>
+                                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
+                                  <p className="text-sm leading-relaxed">
+                                    {feedback.feedback_summary}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
@@ -509,78 +488,93 @@ export default function Feedback() {
 
               {/* 자세 탭 */}
               <TabsContent value="posture">
-                {postureData ? (
-                  <div className="space-y-4">
-                    <Card className="bg-primary/10 border-primary/20">
-                      <CardContent className="p-6">
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground mb-2">자세 총 점수</p>
-                          <div className="text-5xl font-bold text-primary">
-                            {postureData.overall_score}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                {postureDataList && postureDataList.length > 0 ? (
+                  <div className="space-y-6">
+                    {postureDataList.map((feedback, index) => {
+                      const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
 
-                    <h3 className="font-semibold text-lg">세부 지표</h3>
-
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">어깨 정렬</span>
-                          <span className="text-xl font-bold text-primary">
-                            {postureData.shoulder}점
-                          </span>
-                        </div>
-                        <Progress value={postureData.shoulder} className="h-2" />
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">고개 수평</span>
-                          <span className="text-xl font-bold text-primary">
-                            {postureData.head}점
-                          </span>
-                        </div>
-                        <Progress value={postureData.head} className="h-2" />
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">손 위치</span>
-                          <span className="text-xl font-bold text-primary">
-                            {postureData.hand}점
-                          </span>
-                        </div>
-                        <Progress value={postureData.hand} className="h-2" />
-                      </CardContent>
-                    </Card>
-
-                    {postureData.problem_sections &&
-                      postureData.problem_sections.length > 0 && (
-                        <Card className="bg-muted/30">
-                          <CardContent className="p-4">
-                            <h4 className="font-semibold mb-3">문제 구간</h4>
-                            <div className="space-y-2">
-                              {postureData.problem_sections.map((section, index) => (
-                                <div
-                                  key={index}
-                                  className="flex items-start gap-3 text-sm border-l-2 border-destructive pl-3"
-                                >
-                                  <span className="text-muted-foreground">
-                                    {section.start_sec}s - {section.end_sec}s
-                                  </span>
-                                  <span>{section.issue}</span>
+                      return (
+                        <Card key={feedback.session_id} className="bg-muted/30 overflow-hidden">
+                          <CardHeader className="bg-primary/5 border-b">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline">질문 {index + 1}</Badge>
+                                  <Badge variant="secondary">
+                                    총점: {Math.round(feedback.overall_score)}
+                                  </Badge>
                                 </div>
-                              ))}
+                                <p className="text-lg font-semibold leading-relaxed">
+                                  {questionText}
+                                </p>
+                              </div>
                             </div>
+                          </CardHeader>
+                          <CardContent className="pt-6 space-y-4">
+                            {/* 세부 지표 */}
+                            <div>
+                              <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
+                              <div className="space-y-2">
+                                <Card className="bg-background/50">
+                                  <CardContent className="p-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-medium">어깨 정렬</span>
+                                      <span className="text-xl font-bold text-primary">
+                                        {Math.round(feedback.shoulder)}점
+                                      </span>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                <Card className="bg-background/50">
+                                  <CardContent className="p-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-medium">고개 수평</span>
+                                      <span className="text-xl font-bold text-primary">
+                                        {Math.round(feedback.head)}점
+                                      </span>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+
+                                <Card className="bg-background/50">
+                                  <CardContent className="p-3">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-medium">손 위치</span>
+                                      <span className="text-xl font-bold text-primary">
+                                        {Math.round(feedback.hand)}점
+                                      </span>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              </div>
+                            </div>
+
+                            {/* 문제 구간 */}
+                            {feedback.problem_sections && feedback.problem_sections.length > 0 && (
+                              <div>
+                                <h4 className="text-sm font-semibold mb-3">문제 구간</h4>
+                                <div className="bg-gradient-to-br from-destructive/5 to-destructive/10 rounded-lg p-4 border border-destructive/20">
+                                  <div className="space-y-2">
+                                    {feedback.problem_sections.map((section, idx) => (
+                                      <div
+                                        key={idx}
+                                        className="flex items-start gap-3 text-sm"
+                                      >
+                                        <span className="text-muted-foreground whitespace-nowrap">
+                                          {section.start_sec}s - {section.end_sec}s
+                                        </span>
+                                        <span>{section.issue}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
-                      )}
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
@@ -589,83 +583,67 @@ export default function Feedback() {
                 )}
               </TabsContent>
 
-              {/* 목소리 탭 (준비) */}
+              {/* 목소리 탭 */}
               <TabsContent value="voice">
-                {voiceData ? (
-                  <div className="space-y-4">
-                    <Card className="bg-primary/10 border-primary/20">
-                      <CardContent className="p-6">
-                        <div className="text-center">
-                          <p className="text-sm text-muted-foreground mb-2">목소리 총 점수</p>
-                          <div className="text-5xl font-bold text-primary">
-                            {voiceData.overall_score}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                {voiceDataList && voiceDataList.length > 0 ? (
+                  <div className="space-y-6">
+                    {voiceDataList.map((feedback, index) => {
+                      const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
 
-                    <h3 className="font-semibold text-lg">세부 지표</h3>
+                      return (
+                        <Card key={feedback.attempt_id} className="bg-muted/30 overflow-hidden">
+                          <CardHeader className="bg-primary/5 border-b">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="outline">질문 {index + 1}</Badge>
+                                  <Badge variant="secondary">
+                                    총점: {feedback.total_score}
+                                  </Badge>
+                                </div>
+                                <p className="text-lg font-semibold leading-relaxed">
+                                  {questionText}
+                                </p>
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="pt-6 space-y-4">
+                            {/* 세부 지표 */}
+                            <div>
+                              <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
+                              <div className="space-y-2">
+                                {feedback.metrics.map((metric) => (
+                                  <Card key={metric.id} className="bg-background/50">
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">{metric.label}</span>
+                                        <Badge variant="secondary">{metric.level}</Badge>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            </div>
 
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">떨림</span>
-                          <span className="text-xl font-bold text-primary">
-                            {voiceData.tremor}점
-                          </span>
-                        </div>
-                        <Progress value={voiceData.tremor} className="h-2" />
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">공백</span>
-                          <span className="text-xl font-bold text-primary">
-                            {voiceData.blank}점
-                          </span>
-                        </div>
-                        <Progress value={voiceData.blank} className="h-2" />
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">억양</span>
-                          <span className="text-xl font-bold text-primary">
-                            {voiceData.tone}점
-                          </span>
-                        </div>
-                        <Progress value={voiceData.tone} className="h-2" />
-                      </CardContent>
-                    </Card>
-
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">속도</span>
-                          <span className="text-xl font-bold text-primary">
-                            {voiceData.speed}점
-                          </span>
-                        </div>
-                        <Progress value={voiceData.speed} className="h-2" />
-                      </CardContent>
-                    </Card>
-
-                    {voiceData.speech && (
-                      <Card className="bg-muted/30">
-                        <CardContent className="p-4">
-                          <h4 className="font-semibold mb-2">발화 텍스트 (STT)</h4>
-                          <p className="text-sm text-muted-foreground">{voiceData.speech}</p>
-                        </CardContent>
-                      </Card>
-                    )}
+                            {/* 요약 코멘트 */}
+                            {feedback.summary && (
+                              <div>
+                                <h4 className="text-sm font-semibold mb-3">코멘트</h4>
+                                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
+                                  <p className="text-sm leading-relaxed">
+                                    {feedback.summary}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 ) : (
                   <div className="text-center text-muted-foreground py-8">
-                    목소리 피드백 기능은 준비 중입니다.
+                    목소리 피드백 데이터가 없습니다.
                   </div>
                 )}
               </TabsContent>

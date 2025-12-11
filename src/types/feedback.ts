@@ -78,15 +78,39 @@ export interface PostureFeedbackResponse {
   problem_sections?: ProblemSection[]; // DB에는 없지만 BE 응답에 있을 수 있음
 }
 
+// 목소리 피드백 - 개별 지표
+export interface VoiceMetric {
+  id: string;
+  label: string;
+  score: number;
+  level: string;
+  value: number | string | null;
+  unit: string | null;
+  description: string;
+  details?: Record<string, any>;
+}
+
 // BE API 응답 타입 - 목소리 피드백
 export interface VoiceFeedbackResponse {
   session_id: number;
-  overall_score: number; // overall_voice
-  tremor: number;
-  blank: number;
-  tone: number;
-  speed: number;
-  speech?: string; // STT 결과
+  attempt_id: number;
+  total_score: number;
+  summary: string;
+  metrics: VoiceMetric[];
+  grouped?: {
+    tremor_events: any[];
+    speed_fast: any[];
+    speed_slow: any[];
+    pause_low: any[];
+    pause_high: any[];
+  };
+  // 하위 호환성을 위한 기존 필드들 (옵션)
+  overall_score?: number;
+  tremor?: number;
+  blank?: number;
+  tone?: number;
+  speed?: number;
+  speech?: string;
 }
 
 // 통합 피드백 응답
