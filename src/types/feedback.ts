@@ -69,12 +69,23 @@ export interface ExpressionFeedbackResponse {
 }
 
 // BE API 응답 타입 - 자세 피드백
+export interface PoseScore {
+  value: number;
+  rating: string;
+}
+
 export interface PostureFeedbackResponse {
+  message: string;
   session_id: number;
-  overall_score: number; // overall_pose
-  shoulder: number;
-  head: number;
-  hand: number;
+  attempt_id: number;
+  overall_score: number; // overall_pose (편의 필드)
+  pose_analysis?: {
+    overall: PoseScore;
+    shoulder: PoseScore;
+    head_tilt: PoseScore;
+    hand: PoseScore;
+  };
+  status?: string; // pending 등
   problem_sections?: ProblemSection[]; // DB에는 없지만 BE 응답에 있을 수 있음
 }
 
@@ -82,11 +93,11 @@ export interface PostureFeedbackResponse {
 export interface VoiceMetric {
   id: string;
   label: string;
-  score: number;
-  level: string;
-  value: number | string | null;
-  unit: string | null;
-  description: string;
+  score: string | number; // 실제로는 string으로 옴 ("55.00")
+  level?: string; // optional - 실제로는 없음
+  value?: number | string | null;
+  unit?: string | null;
+  description?: string;
   details?: Record<string, any>;
 }
 

@@ -287,10 +287,10 @@ export default function PracticeRoom() {
   };
 
   // 녹화 파일 업로드
-  const uploadRecording = async (questionIndex: number, blob: Blob) => {
+  const uploadRecording = async (questionIndex: number, blob: Blob): Promise<{ success: boolean; attemptId?: number }> => {
     if (!sessionId) {
       console.error("Session ID not found");
-      return false;
+      return { success: false };
     }
 
     try {
@@ -318,7 +318,7 @@ export default function PracticeRoom() {
         description: `질문 ${questionIndex + 1}의 답변이 저장되었습니다.`,
       });
 
-      return true;
+      return { success: true, attemptId: response.attempt_id };
     } catch (error) {
       console.error(`Upload failed for Q${questionIndex}:`, error);
 
@@ -328,27 +328,28 @@ export default function PracticeRoom() {
         variant: "destructive",
       });
 
-      return false;
+      return { success: false };
     } finally {
       setIsUploading(false);
     }
   };
 
   // STT 및 답변 평가 처리
-  const processFeedback = async () => {
+  const processFeedback = async (validAttemptIds?: number[]) => {
     if (!sessionId) return;
 
-    const validAttemptIds = attemptIds.filter(id => id);
-    if (validAttemptIds.length === 0) return;
+    // 매개변수로 전달된 ID 배열 사용, 없으면 state에서 가져오기
+    const idsToProcess = validAttemptIds || attemptIds.filter(id => id);
+    if (idsToProcess.length === 0) return;
 
     setIsProcessingFeedback(true);
-    setFeedbackProgress({ current: 0, total: validAttemptIds.length });
+    setFeedbackProgress({ current: 0, total: idsToProcess.length });
 
-    for (let i = 0; i < validAttemptIds.length; i++) {
-      const attemptId = validAttemptIds[i];
+    for (let i = 0; i < idsToProcess.length; i++) {
+      const attemptId = idsToProcess[i];
 
       try {
-        setFeedbackProgress({ current: i + 1, total: validAttemptIds.length });
+        setFeedbackProgress({ current: i + 1, total: idsToProcess.length });
 
         // Step 1: STT 처리
         console.log(`[질문 ${i + 1}] STT 처리 시작...`);
@@ -380,21 +381,26 @@ export default function PracticeRoom() {
   };
 
   const handleNext = async () => {
+    let currentAttemptId: number | undefined;
+
     // 현재 질문의 녹화 업로드
     if (recordedBlobs[currentQuestion]) {
-      const uploadSuccess = await uploadRecording(
+      const uploadResult = await uploadRecording(
         currentQuestion,
         recordedBlobs[currentQuestion]
       );
 
-      if (!uploadSuccess) {
+      currentAttemptId = uploadResult.attemptId;
+
+      if (!uploadResult.success) {
         // 업로드 실패 시 사용자에게 재시도 옵션 제공
         const retry = window.confirm(
           "답변 저장에 실패했습니다. 다시 시도하시겠습니까?"
         );
 
         if (retry) {
-          await uploadRecording(currentQuestion, recordedBlobs[currentQuestion]);
+          const retryResult = await uploadRecording(currentQuestion, recordedBlobs[currentQuestion]);
+          currentAttemptId = retryResult.attemptId;
         }
       }
     }
@@ -413,8 +419,17 @@ export default function PracticeRoom() {
           });
           console.log(`Session ${sessionId} completed successfully`);
 
-          // STT 및 답변 평가 처리
-          await processFeedback();
+          // 모든 업로드된 attempt_id 수집 (마지막 ID 포함)
+          const allAttemptIds = [...attemptIds];
+          if (currentAttemptId) {
+            allAttemptIds[currentQuestion] = currentAttemptId;
+          }
+          const validAttemptIds = allAttemptIds.filter(id => id);
+
+          console.log(`Total attempt IDs: ${validAttemptIds.length}`);
+
+          // STT 및 답변 평가 처리 (validAttemptIds 직접 전달)
+          await processFeedback(validAttemptIds);
 
         } catch (error) {
           console.error("Failed to complete session:", error);
@@ -423,8 +438,12 @@ export default function PracticeRoom() {
 
       console.log(`Total recordings uploaded: ${recordedBlobs.length}`);
 
-      // Pass attempt_ids to feedback page
-      const attemptIdsParam = attemptIds.filter(id => id).join(',');
+      // Pass attempt_ids to feedback page (마지막 ID 포함)
+      const allAttemptIds = [...attemptIds];
+      if (currentAttemptId) {
+        allAttemptIds[currentQuestion] = currentAttemptId;
+      }
+      const attemptIdsParam = allAttemptIds.filter(id => id).join(',');
       navigate(`/feedback/${id}?session_id=${sessionId}&attempt_ids=${attemptIdsParam}`);
     }
   };
