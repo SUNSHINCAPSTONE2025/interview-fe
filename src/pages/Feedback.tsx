@@ -13,6 +13,15 @@ import {
   Loader2,
   AlertCircle,
   MessageSquare,
+  Eye,
+  Smile,
+  User2,
+  Move,
+  Hand,
+  Waves,
+  Clock,
+  Volume2,
+  Gauge,
 } from "lucide-react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -69,6 +78,9 @@ export default function Feedback() {
     ? attemptIdsParam.split(",").map(Number).filter(Boolean)
     : [];
 
+  // Check if coming from history (use unified API) or from practice end (use individual APIs)
+  const fromHistory = searchParams.get("from") === "history";
+
   // 중복 refetch를 방지하기 위한 공통 옵션 (포커스/재연결 시 재요청 끔, 5분 캐싱)
   const queryBaseOptions = {
     refetchOnWindowFocus: false,
@@ -81,6 +93,18 @@ export default function Feedback() {
     queryKey: ["session", sessionId],
     queryFn: () => sessionsApi.getById(sessionId),
     enabled: !!sessionId,
+    ...queryBaseOptions,
+  });
+
+  // 🔄 통합 피드백 조회 (from=history인 경우)
+  const {
+    data: unifiedData,
+    isLoading: unifiedLoading,
+    error: unifiedError,
+  } = useQuery({
+    queryKey: ["feedback-unified", sessionId],
+    queryFn: () => feedbackApi.getAllAttemptsFeedback(sessionId),
+    enabled: !!sessionId && fromHistory,
     ...queryBaseOptions,
   });
 
@@ -101,22 +125,9 @@ export default function Feedback() {
       );
       return Promise.all(promises);
     },
-    enabled: !!sessionId && attemptIds.length > 0,
+    enabled: !!sessionId && attemptIds.length > 0 && !fromHistory,
     ...queryBaseOptions,
   });
-
-  // 표정 피드백 평균 계산
-  const expressionData = expressionDataList && expressionDataList.length > 0
-    ? {
-        overall_score: Math.round(
-          expressionDataList.reduce((sum, fb) => sum + fb.overall_score, 0) / expressionDataList.length
-        ),
-        gaze_rating: expressionDataList[0]?.expression_analysis?.head_eye_gaze_rate?.rating || "-",
-        eye_blink_rating: expressionDataList[0]?.expression_analysis?.blink_stability?.rating || "-",
-        mouth_rating: expressionDataList[0]?.expression_analysis?.mouth_delta?.rating || "-",
-        comment: expressionDataList[0]?.feedback_summary,
-      }
-    : null;
 
   // 자세 피드백 조회 (동기 처리) - 모든 attempts에 대해 병렬 조회
   // GET 요청 시 즉시 분석 수행 후 결과 반환 (표정과 동일)
@@ -135,7 +146,7 @@ export default function Feedback() {
       );
       return Promise.all(promises);
     },
-    enabled: !!sessionId && attemptIds.length > 0,
+    enabled: !!sessionId && attemptIds.length > 0 && !fromHistory,
     // 분석 대기(202) 응답이 있으면 완료될 때까지 3초 간격으로 폴링
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -148,10 +159,96 @@ export default function Feedback() {
     ...queryBaseOptions,
   });
 
+  // 목소리 피드백 조회 (동기 처리) - 모든 attempts에 대해 병렬 조회
+  // GET 요청 시 즉시 분석 수행 후 결과 반환
+  const {
+    data: voiceDataList,
+    isLoading: voiceLoading,
+    error: voiceError,
+  } = useQuery({
+    queryKey: ["voice-feedback", sessionId, attemptIds],
+    queryFn: async (): Promise<VoiceFeedbackResponse[]> => {
+      if (attemptIds.length === 0) return [];
+
+      // 모든 attempts에 대해 병렬 조회
+      const promises = attemptIds.map(attemptId =>
+        feedbackApi.getVoiceFeedback(sessionId, attemptId)
+      );
+      return Promise.all(promises);
+    },
+    enabled: !!sessionId && attemptIds.length > 0 && !fromHistory, // 활성화
+    ...queryBaseOptions,
+  });
+
+  // 답변 평가 조회 (텍스트 탭용) - 모든 attempts에 대해 병렬 조회
+  const {
+    data: textFeedbackList,
+    isLoading: textLoading,
+    error: textError,
+  } = useQuery({
+    queryKey: ["text-feedback", sessionId, attemptIds],
+    queryFn: async (): Promise<AttemptFeedbackResponse[]> => {
+      if (attemptIds.length === 0) return [];
+
+      // 모든 attempts에 대해 병렬 조회
+      const promises = attemptIds.map(attemptId =>
+        answerEvalApi.getAttemptFeedback(sessionId, attemptId)
+      );
+      return Promise.all(promises);
+    },
+    enabled: !!sessionId && attemptIds.length > 0 && !fromHistory,
+    ...queryBaseOptions,
+  });
+
+  // 🔄 통합 API 데이터를 개별 API 형식으로 변환
+  const finalExpressionData = fromHistory && unifiedData
+    ? unifiedData.attempts.map(a => a.expression).filter(Boolean) as ExpressionFeedbackResponse[]
+    : expressionDataList;
+
+  const finalPostureData = fromHistory && unifiedData
+    ? unifiedData.attempts.map(a => a.posture).filter(Boolean) as PostureFeedbackResponse[]
+    : postureDataList;
+
+  const finalVoiceData = fromHistory && unifiedData
+    ? unifiedData.attempts.map(a => a.voice).filter(Boolean) as VoiceFeedbackResponse[]
+    : voiceDataList;
+
+  const finalTextFeedback = fromHistory && unifiedData
+    ? unifiedData.attempts.map(a => ({
+        attempt_id: a.attempt_id,
+        question_text: a.question_text,
+        stt_text: a.answer_eval.stt_text,
+        evaluation_comment: a.answer_eval.evaluation_comment,
+        scores: {
+          overall_voice: a.voice?.total_score || null,
+          overall_face: a.expression?.overall_score || null,
+          overall_pose: a.posture?.overall_score || null,
+        }
+      }))
+    : textFeedbackList;
+
+  // 로딩 상태
+  const isLoading = fromHistory
+    ? unifiedLoading
+    : (expressionLoading || postureLoading || voiceLoading || textLoading);
+
+  // 표정 피드백 평균 계산
+  const expressionData = finalExpressionData && finalExpressionData.length > 0
+    ? {
+        overall_score: Math.round(
+          finalExpressionData.reduce((sum, fb) => sum + fb.overall_score, 0) / finalExpressionData.length
+        ),
+        gaze_rating: finalExpressionData[0]?.expression_analysis?.head_eye_gaze_rate?.rating || "-",
+        eye_blink_rating: finalExpressionData[0]?.expression_analysis?.blink_stability?.rating || "-",
+        mouth_rating: finalExpressionData[0]?.expression_analysis?.mouth_delta?.rating || "-",
+        comment: finalExpressionData[0]?.feedback_summary,
+      }
+    : null;
+
   // 자세 피드백 평균 계산
-  const postureData = postureDataList && postureDataList.length > 0
+  const postureData = finalPostureData && finalPostureData.length > 0
     ? (() => {
-        const completed = postureDataList.filter(fb => fb.pose_analysis);
+        const completed = finalPostureData.filter(fb => fb.pose_analysis);
         if (completed.length === 0) return null;
 
         const sum = completed.reduce(
@@ -176,58 +273,14 @@ export default function Feedback() {
       })()
     : null;
 
-  // 목소리 피드백 조회 (동기 처리) - 모든 attempts에 대해 병렬 조회
-  // GET 요청 시 즉시 분석 수행 후 결과 반환
-  const {
-    data: voiceDataList,
-    isLoading: voiceLoading,
-    error: voiceError,
-  } = useQuery({
-    queryKey: ["voice-feedback", sessionId, attemptIds],
-    queryFn: async (): Promise<VoiceFeedbackResponse[]> => {
-      if (attemptIds.length === 0) return [];
-
-      // 모든 attempts에 대해 병렬 조회
-      const promises = attemptIds.map(attemptId =>
-        feedbackApi.getVoiceFeedback(sessionId, attemptId)
-      );
-      return Promise.all(promises);
-    },
-    enabled: !!sessionId && attemptIds.length > 0, // 활성화
-    ...queryBaseOptions,
-  });
-
   // 목소리 피드백 평균 계산
-  const voiceData = voiceDataList && voiceDataList.length > 0
+  const voiceData = finalVoiceData && finalVoiceData.length > 0
     ? {
         overall_score: Math.round(
-          voiceDataList.reduce((sum, fb) => sum + fb.total_score, 0) / voiceDataList.length
+          finalVoiceData.reduce((sum, fb) => sum + fb.total_score, 0) / finalVoiceData.length
         ),
       }
     : null;
-
-  // 답변 평가 조회 (텍스트 탭용) - 모든 attempts에 대해 병렬 조회
-  const {
-    data: textFeedbackList,
-    isLoading: textLoading,
-    error: textError,
-  } = useQuery({
-    queryKey: ["text-feedback", sessionId, attemptIds],
-    queryFn: async (): Promise<AttemptFeedbackResponse[]> => {
-      if (attemptIds.length === 0) return [];
-
-      // 모든 attempts에 대해 병렬 조회
-      const promises = attemptIds.map(attemptId =>
-        answerEvalApi.getAttemptFeedback(sessionId, attemptId)
-      );
-      return Promise.all(promises);
-    },
-    enabled: !!sessionId && attemptIds.length > 0,
-    ...queryBaseOptions,
-  });
-
-  // 로딩 상태
-  const isLoading = expressionLoading || postureLoading || voiceLoading || textLoading;
 
   // 전체 점수 계산 (표정 + 자세 + 목소리 평균)
   const calculateOverallScore = () => {
@@ -259,8 +312,8 @@ export default function Feedback() {
   }
 
   // 에러 화면
-  if (expressionError || postureError || voiceError || textError) {
-    const error = expressionError || postureError || voiceError || textError;
+  if (fromHistory ? unifiedError : (expressionError || postureError || voiceError || textError)) {
+    const error = fromHistory ? unifiedError : (expressionError || postureError || voiceError || textError);
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
         <Card className="max-w-md">
@@ -388,9 +441,9 @@ export default function Feedback() {
 
               {/* 텍스트 탭 */}
               <TabsContent value="text">
-                {textFeedbackList && textFeedbackList.length > 0 ? (
+                {finalTextFeedback && finalTextFeedback.length > 0 ? (
                   <div className="space-y-6">
-                    {textFeedbackList.map((feedback, index) => {
+                    {finalTextFeedback.map((feedback, index) => {
                       // 세션 질문 데이터에서 해당 질문 찾기 (순서 기반)
                       const questionText = feedback.question_text ||
                         sessionData?.questions?.[index]?.text ||
@@ -462,9 +515,9 @@ export default function Feedback() {
 
               {/* 표정 탭 */}
               <TabsContent value="expression">
-                {expressionDataList && expressionDataList.length > 0 ? (
+                {finalExpressionData && finalExpressionData.length > 0 ? (
                   <div className="space-y-6">
-                    {expressionDataList.map((feedback, index) => {
+                    {finalExpressionData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
 
                       return (
@@ -484,75 +537,97 @@ export default function Feedback() {
                               </div>
                             </div>
                           </CardHeader>
-                          <CardContent className="pt-6 space-y-4">
-                            {/* 세부 지표 */}
-                            <div>
-                              <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
-                              <div className="space-y-2">
-                                <Card className="bg-background/50">
-                                  <CardContent className="p-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-sm font-medium">시선</span>
-                                      {(() => {
-                                        const rating = feedback.expression_analysis?.head_eye_gaze_rate?.rating;
-                                        const style = getRatingBadgeStyle(rating);
-                                        return (
-                                          <Badge variant={style.variant} className={style.className}>
-                                            {rating || "-"}
-                                          </Badge>
-                                        );
-                                      })()}
-                                    </div>
-                                  </CardContent>
-                                </Card>
-
-                                <Card className="bg-background/50">
-                                  <CardContent className="p-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-sm font-medium">눈 깜빡임</span>
-                                      {(() => {
-                                        const rating = feedback.expression_analysis?.blink_stability?.rating;
-                                        const style = getRatingBadgeStyle(rating);
-                                        return (
-                                          <Badge variant={style.variant} className={style.className}>
-                                            {rating || "-"}
-                                          </Badge>
-                                        );
-                                      })()}
-                                    </div>
-                                  </CardContent>
-                                </Card>
-
-                                <Card className="bg-background/50">
-                                  <CardContent className="p-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-sm font-medium">입꼬리</span>
-                                      {(() => {
-                                        const rating = feedback.expression_analysis?.mouth_delta?.rating;
-                                        const style = getRatingBadgeStyle(rating);
-                                        return (
-                                          <Badge variant={style.variant} className={style.className}>
-                                            {rating || "-"}
-                                          </Badge>
-                                        );
-                                      })()}
-                                    </div>
-                                  </CardContent>
-                                </Card>
-                              </div>
-                            </div>
-
-                            {/* 코멘트 */}
-                            {feedback.feedback_summary && (
+                          <CardContent className="pt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* 왼쪽: 동영상 영역 */}
                               <div>
-                                <h4 className="text-sm font-semibold mb-3">코멘트</h4>
-                                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
-                                  <p className="text-sm leading-relaxed">
-                                    {feedback.feedback_summary}
-                                  </p>
+                                <h4 className="text-sm font-semibold mb-3">동영상</h4>
+                                <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
+                                  <div className="text-center text-muted-foreground">
+                                    <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">동영상 준비 중</p>
+                                  </div>
                                 </div>
                               </div>
-                            )}
+
+                              {/* 오른쪽: 세부 지표 */}
+                              <div>
+                                <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
+                                <div className="space-y-2">
+                                  <Card className="bg-background/50">
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <Eye className="h-4 w-4 text-primary" />
+                                          <span className="text-sm font-medium">시선</span>
+                                        </div>
+                                        {(() => {
+                                          const rating = feedback.expression_analysis?.head_eye_gaze_rate?.rating;
+                                          const style = getRatingBadgeStyle(rating);
+                                          return (
+                                            <Badge variant={style.variant} className={style.className}>
+                                              {rating || "-"}
+                                            </Badge>
+                                          );
+                                        })()}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+
+                                  <Card className="bg-background/50">
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <Eye className="h-4 w-4 text-primary" />
+                                          <span className="text-sm font-medium">눈 깜빡임</span>
+                                        </div>
+                                        {(() => {
+                                          const rating = feedback.expression_analysis?.blink_stability?.rating;
+                                          const style = getRatingBadgeStyle(rating);
+                                          return (
+                                            <Badge variant={style.variant} className={style.className}>
+                                              {rating || "-"}
+                                            </Badge>
+                                          );
+                                        })()}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+
+                                  <Card className="bg-background/50">
+                                    <CardContent className="p-3">
+                                      <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                          <Smile className="h-4 w-4 text-primary" />
+                                          <span className="text-sm font-medium">입꼬리</span>
+                                        </div>
+                                        {(() => {
+                                          const rating = feedback.expression_analysis?.mouth_delta?.rating;
+                                          const style = getRatingBadgeStyle(rating);
+                                          return (
+                                            <Badge variant={style.variant} className={style.className}>
+                                              {rating || "-"}
+                                            </Badge>
+                                          );
+                                        })()}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+
+                                {/* 코멘트 */}
+                                {feedback.feedback_summary && (
+                                  <div className="mt-4">
+                                    <h4 className="text-sm font-semibold mb-3">코멘트</h4>
+                                    <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
+                                      <p className="text-sm leading-relaxed">
+                                        {feedback.feedback_summary}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </CardContent>
                         </Card>
                       );
@@ -567,9 +642,9 @@ export default function Feedback() {
 
               {/* 자세 탭 */}
               <TabsContent value="posture">
-                {postureDataList && postureDataList.length > 0 ? (
+                {finalPostureData && finalPostureData.length > 0 ? (
                   <div className="space-y-6">
-                    {postureDataList.map((feedback, index) => {
+                    {finalPostureData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
                       const pose = feedback.pose_analysis;
 
@@ -594,61 +669,85 @@ export default function Feedback() {
                               </div>
                             </div>
                           </CardHeader>
-                          <CardContent className="pt-6 space-y-4">
-                            {/* 세부 지표 */}
-                            <div>
-                              <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
-                              <div className="space-y-2">
-                                {[
-                                  { label: "어깨 정렬", value: pose?.shoulder.value, rating: pose?.shoulder.rating },
-                                  { label: "고개 수평", value: pose?.head_tilt.value, rating: pose?.head_tilt.rating },
-                                  { label: "손 위치", value: pose?.hand.value, rating: pose?.hand.rating },
-                                ].map((item, idx) => {
-                                  const style = getRatingBadgeStyle(item.rating);
-                                  return (
-                                    <Card key={idx} className="bg-background/50">
-                                      <CardContent className="p-3">
-                                        <div className="flex items-center justify-between">
-                                          <div>
-                                            <span className="text-sm font-medium">{item.label}</span>
+                          <CardContent className="pt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* 왼쪽: 동영상 영역 */}
+                              <div>
+                                <h4 className="text-sm font-semibold mb-3">동영상</h4>
+                                <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
+                                  <div className="text-center text-muted-foreground">
+                                    <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">동영상 준비 중</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 오른쪽: 세부 지표 */}
+                              <div>
+                                <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
+                                <div className="space-y-2">
+                                  {[
+                                    {
+                                      icon: User2,
+                                      label: "어깨 정렬",
+                                      rating: pose?.shoulder.rating
+                                    },
+                                    {
+                                      icon: Move,
+                                      label: "고개 수평",
+                                      rating: pose?.head_tilt.rating
+                                    },
+                                    {
+                                      icon: Hand,
+                                      label: "손 위치",
+                                      rating: pose?.hand.rating
+                                    },
+                                  ].map((item, idx) => {
+                                    const style = getRatingBadgeStyle(item.rating);
+                                    const IconComponent = item.icon;
+                                    return (
+                                      <Card key={idx} className="bg-background/50">
+                                        <CardContent className="p-3">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <IconComponent className="h-4 w-4 text-primary" />
+                                              <span className="text-sm font-medium">{item.label}</span>
+                                            </div>
                                             {item.rating && (
-                                              <Badge className={`ml-2 ${style.className}`} variant={style.variant}>
+                                              <Badge className={style.className} variant={style.variant}>
                                                 {item.rating}
                                               </Badge>
                                             )}
                                           </div>
-                                          <span className="text-xl font-bold text-primary">
-                                            {item.value !== undefined ? Math.round(item.value) : "-"}
-                                          </span>
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  );
-                                })}
+                                        </CardContent>
+                                      </Card>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* 문제 구간 */}
+                                {feedback.problem_sections && feedback.problem_sections.length > 0 && (
+                                  <div className="mt-4">
+                                    <h4 className="text-sm font-semibold mb-3">문제 구간</h4>
+                                    <div className="bg-gradient-to-br from-destructive/5 to-destructive/10 rounded-lg p-4 border border-destructive/20">
+                                      <div className="space-y-2">
+                                        {feedback.problem_sections.map((section, idx) => (
+                                          <div
+                                            key={idx}
+                                            className="flex items-start gap-3 text-sm"
+                                          >
+                                            <span className="text-muted-foreground whitespace-nowrap">
+                                              {section.start_sec}s - {section.end_sec}s
+                                            </span>
+                                            <span>{section.issue}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
-
-                            {/* 문제 구간 */}
-                            {feedback.problem_sections && feedback.problem_sections.length > 0 && (
-                              <div>
-                                <h4 className="text-sm font-semibold mb-3">문제 구간</h4>
-                                <div className="bg-gradient-to-br from-destructive/5 to-destructive/10 rounded-lg p-4 border border-destructive/20">
-                                  <div className="space-y-2">
-                                    {feedback.problem_sections.map((section, idx) => (
-                                      <div
-                                        key={idx}
-                                        className="flex items-start gap-3 text-sm"
-                                      >
-                                        <span className="text-muted-foreground whitespace-nowrap">
-                                          {section.start_sec}s - {section.end_sec}s
-                                        </span>
-                                        <span>{section.issue}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              </div>
-                            )}
                           </CardContent>
                         </Card>
                       );
@@ -663,10 +762,28 @@ export default function Feedback() {
 
               {/* 목소리 탭 */}
               <TabsContent value="voice">
-                {voiceDataList && voiceDataList.length > 0 ? (
+                {finalVoiceData && finalVoiceData.length > 0 ? (
                   <div className="space-y-6">
-                    {voiceDataList.map((feedback, index) => {
+                    {finalVoiceData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
+
+                      // 메트릭 라벨에 따른 아이콘 매핑
+                      const getMetricIcon = (label: string) => {
+                        const lowerLabel = label.toLowerCase();
+                        if (lowerLabel.includes('떨림') || lowerLabel.includes('shake') || lowerLabel.includes('tremor')) {
+                          return Waves;
+                        }
+                        if (lowerLabel.includes('공백') || lowerLabel.includes('pause') || lowerLabel.includes('silence')) {
+                          return Clock;
+                        }
+                        if (lowerLabel.includes('톤') || lowerLabel.includes('tone') || lowerLabel.includes('pitch')) {
+                          return Volume2;
+                        }
+                        if (lowerLabel.includes('속도') || lowerLabel.includes('speed') || lowerLabel.includes('pace')) {
+                          return Gauge;
+                        }
+                        return Mic; // 기본 아이콘
+                      };
 
                       return (
                         <Card key={feedback.attempt_id} className="bg-muted/30 overflow-hidden">
@@ -685,49 +802,59 @@ export default function Feedback() {
                               </div>
                             </div>
                           </CardHeader>
-                          <CardContent className="pt-6 space-y-4">
-                            {/* 세부 지표 */}
-                            <div>
-                              <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
-                              <div className="space-y-2">
-                                {feedback.metrics.map((metric) => {
-                                  const style = getRatingBadgeStyle(metric.level);
-                                  return (
-                                    <Card key={metric.id} className="bg-background/50">
-                                      <CardContent className="p-3">
-                                        <div className="flex items-center justify-between">
-                                          <span className="text-sm font-medium">{metric.label}</span>
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-xl font-bold text-primary">
-                                              {typeof metric.score === 'string'
-                                                ? parseFloat(metric.score).toFixed(0)
-                                                : Math.round(metric.score)}
-                                            </span>
+                          <CardContent className="pt-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              {/* 왼쪽: 동영상 영역 */}
+                              <div>
+                                <h4 className="text-sm font-semibold mb-3">동영상</h4>
+                                <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
+                                  <div className="text-center text-muted-foreground">
+                                    <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                    <p className="text-sm">동영상 준비 중</p>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* 오른쪽: 세부 지표 */}
+                              <div>
+                                <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
+                                <div className="space-y-2">
+                                  {feedback.metrics.map((metric) => {
+                                    const style = getRatingBadgeStyle(metric.level);
+                                    const IconComponent = getMetricIcon(metric.label);
+                                    return (
+                                      <Card key={metric.id} className="bg-background/50">
+                                        <CardContent className="p-3">
+                                          <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                              <IconComponent className="h-4 w-4 text-primary" />
+                                              <span className="text-sm font-medium">{metric.label}</span>
+                                            </div>
                                             {metric.level && (
                                               <Badge variant={style.variant} className={style.className}>
                                                 {metric.level}
                                               </Badge>
                                             )}
                                           </div>
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  );
-                                })}
+                                        </CardContent>
+                                      </Card>
+                                    );
+                                  })}
+                                </div>
+
+                                {/* 요약 코멘트 */}
+                                {feedback.summary && (
+                                  <div className="mt-4">
+                                    <h4 className="text-sm font-semibold mb-3">코멘트</h4>
+                                    <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
+                                      <p className="text-sm leading-relaxed">
+                                        {feedback.summary}
+                                      </p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             </div>
-
-                            {/* 요약 코멘트 */}
-                            {feedback.summary && (
-                              <div>
-                                <h4 className="text-sm font-semibold mb-3">코멘트</h4>
-                                <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
-                                  <p className="text-sm leading-relaxed">
-                                    {feedback.summary}
-                                  </p>
-                                </div>
-                              </div>
-                            )}
                           </CardContent>
                         </Card>
                       );

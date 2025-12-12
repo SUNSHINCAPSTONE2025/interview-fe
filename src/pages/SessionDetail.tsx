@@ -172,7 +172,7 @@ export default function SessionDetail() {
                     {sessions.map((session) => (
                       <Link
                         key={session.id}
-                        to={`/feedback/${session.id}`}
+                        to={`/feedback/${session.id}?from=history`}
                         className="block p-4 rounded-lg border border-border hover:bg-accent/50 hover:shadow-card transition-all"
                       >
                         <div className="flex items-center justify-between">

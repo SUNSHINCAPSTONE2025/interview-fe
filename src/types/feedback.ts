@@ -179,3 +179,25 @@ export interface AttemptFeedbackResponse {
     overall_pose: number | null;
   };
 }
+
+// 통합 피드백 API - 답변 평가 (Unified API)
+export interface UnifiedAnswerEvaluation {
+  stt_text: string | null;
+  evaluation_comment: string | null;
+}
+
+// 통합 피드백 API - Attempt별 피드백 (Unified API)
+export interface UnifiedAttemptFeedback {
+  attempt_id: number;
+  question_text: string | null;
+  expression: ExpressionFeedbackResponse | null;
+  posture: PostureFeedbackResponse | null;
+  voice: VoiceFeedbackResponse | null;
+  answer_eval: UnifiedAnswerEvaluation;
+}
+
+// 통합 피드백 API - 전체 응답 (Unified API)
+export interface UnifiedFeedbackResponse {
+  session_id: number;
+  attempts: UnifiedAttemptFeedback[];
+}

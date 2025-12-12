@@ -5,6 +5,7 @@ import type {
   VoiceFeedbackResponse,
   CompleteFeedbackResponse,
   StartPoseAnalysisResponse,
+  UnifiedFeedbackResponse,
 } from "@/types/feedback";
 
 export const feedbackApi = {
@@ -115,6 +116,30 @@ export const feedbackApi = {
   ): Promise<CompleteFeedbackResponse> => {
     return apiRequest<CompleteFeedbackResponse>(
       `/api/feedback/${sessionId}`,
+      { method: "GET" }
+    );
+  },
+
+  /**
+   * 통합 피드백 조회 - 모든 Attempt 피드백 한 번에 조회 (신규 API)
+   * GET /api/feedback/{session_id}/attempts/all
+   *
+   * 세션의 모든 attempt에 대한 상세 피드백을 한 번에 반환합니다.
+   * 이미 분석이 완료된 데이터를 조회할 때 사용 (재분석 X)
+   *
+   * @param sessionId - Session ID
+   * @returns {UnifiedFeedbackResponse} - 모든 attempt 피드백 포함
+   *
+   * 사용 시나리오:
+   * - 세션 상세보기 페이지에서 피드백 조회
+   * - 과거 면접 세션 리뷰
+   * - URL 파라미터 from=history로 구분
+   */
+  getAllAttemptsFeedback: async (
+    sessionId: number
+  ): Promise<UnifiedFeedbackResponse> => {
+    return apiRequest<UnifiedFeedbackResponse>(
+      `/api/feedback/${sessionId}/attempts/all`,
       { method: "GET" }
     );
   },
