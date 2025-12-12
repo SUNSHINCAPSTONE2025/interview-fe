@@ -6,6 +6,7 @@ import type {
   CompleteFeedbackResponse,
   StartPoseAnalysisResponse,
   UnifiedFeedbackResponse,
+  VideoUrlResponse,
 } from "@/types/feedback";
 
 export const feedbackApi = {
@@ -140,6 +141,33 @@ export const feedbackApi = {
   ): Promise<UnifiedFeedbackResponse> => {
     return apiRequest<UnifiedFeedbackResponse>(
       `/api/feedback/${sessionId}/attempts/all`,
+      { method: "GET" }
+    );
+  },
+
+  /**
+   * 동영상 URL 조회
+   * GET /api/feedback/sessions/{session_id}/attempts/{attempt_id}/video
+   *
+   * Supabase Storage에 저장된 동영상에 대한 signed URL을 반환합니다.
+   * MediaAsset 테이블에서 session_id, attempt_id, kind=1(video)로 조회하여 signed URL 생성
+   *
+   * @param sessionId - Session ID
+   * @param attemptId - Attempt ID
+   * @returns {VideoUrlResponse} - signed URL과 만료 시간 포함
+   * @throws {ApiError} 404 - video_not_found (동영상이 없는 경우)
+   * @throws {ApiError} 403 - forbidden (권한 없음)
+   *
+   * 사용 시나리오:
+   * - 피드백 페이지에서 각 질문별 동영상 재생
+   * - signed URL은 1시간 후 만료됨 (3600초)
+   */
+  getVideoUrl: async (
+    sessionId: number,
+    attemptId: number
+  ): Promise<VideoUrlResponse> => {
+    return apiRequest<VideoUrlResponse>(
+      `/api/feedback/sessions/${sessionId}/attempts/${attemptId}/video`,
       { method: "GET" }
     );
   },

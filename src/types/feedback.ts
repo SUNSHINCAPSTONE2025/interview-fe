@@ -201,3 +201,11 @@ export interface UnifiedFeedbackResponse {
   session_id: number;
   attempts: UnifiedAttemptFeedback[];
 }
+
+// 동영상 URL 조회 API 응답
+export interface VideoUrlResponse {
+  session_id: number;
+  attempt_id: number;
+  video_url: string;
+  expires_in: number; // signed URL 만료 시간 (초)
+}

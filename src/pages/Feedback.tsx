@@ -227,6 +227,35 @@ export default function Feedback() {
       }))
     : textFeedbackList;
 
+  // 동영상 URL 조회 - 모든 attempts에 대해 병렬 조회
+  const {
+    data: videoUrlList,
+    isLoading: videoLoading,
+  } = useQuery({
+    queryKey: ["video-urls", sessionId, attemptIds],
+    queryFn: async () => {
+      if (attemptIds.length === 0) return [];
+
+      // 모든 attempts에 대해 병렬 조회
+      const promises = attemptIds.map(attemptId =>
+        feedbackApi.getVideoUrl(sessionId, attemptId).catch(() => null) // 에러 시 null 반환
+      );
+      return Promise.all(promises);
+    },
+    enabled: !!sessionId && attemptIds.length > 0,
+    ...queryBaseOptions,
+  });
+
+  // attempt_id를 키로 하는 video URL map 생성
+  const videoUrlMap = new Map<number, string>();
+  if (videoUrlList && attemptIds.length > 0) {
+    videoUrlList.forEach((videoData, index) => {
+      if (videoData?.video_url) {
+        videoUrlMap.set(attemptIds[index], videoData.video_url);
+      }
+    });
+  }
+
   // 로딩 상태
   const isLoading = fromHistory
     ? unifiedLoading
@@ -519,6 +548,7 @@ export default function Feedback() {
                   <div className="space-y-6">
                     {finalExpressionData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
+                      const videoUrl = videoUrlMap.get(feedback.attempt_id);
 
                       return (
                         <Card key={feedback.attempt_id} className="bg-muted/30 overflow-hidden">
@@ -542,12 +572,27 @@ export default function Feedback() {
                               {/* 왼쪽: 동영상 영역 */}
                               <div>
                                 <h4 className="text-sm font-semibold mb-3">동영상</h4>
-                                <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
-                                  <div className="text-center text-muted-foreground">
-                                    <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                    <p className="text-sm">동영상 준비 중</p>
+                                {videoLoading ? (
+                                  <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
+                                    <div className="text-center text-muted-foreground">
+                                      <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                                      <p className="text-sm">동영상 로딩 중...</p>
+                                    </div>
                                   </div>
-                                </div>
+                                ) : videoUrl ? (
+                                  <video
+                                    src={videoUrl}
+                                    controls
+                                    className="w-full rounded-lg aspect-video bg-black"
+                                  />
+                                ) : (
+                                  <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
+                                    <div className="text-center text-muted-foreground">
+                                      <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                      <p className="text-sm">동영상을 찾을 수 없습니다</p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
 
                               {/* 오른쪽: 세부 지표 */}
@@ -647,6 +692,7 @@ export default function Feedback() {
                     {finalPostureData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
                       const pose = feedback.pose_analysis;
+                      const videoUrl = videoUrlMap.get(feedback.attempt_id);
 
                       return (
                         <Card key={feedback.session_id} className="bg-muted/30 overflow-hidden">
@@ -674,12 +720,27 @@ export default function Feedback() {
                               {/* 왼쪽: 동영상 영역 */}
                               <div>
                                 <h4 className="text-sm font-semibold mb-3">동영상</h4>
-                                <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
-                                  <div className="text-center text-muted-foreground">
-                                    <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                    <p className="text-sm">동영상 준비 중</p>
+                                {videoLoading ? (
+                                  <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
+                                    <div className="text-center text-muted-foreground">
+                                      <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                                      <p className="text-sm">동영상 로딩 중...</p>
+                                    </div>
                                   </div>
-                                </div>
+                                ) : videoUrl ? (
+                                  <video
+                                    src={videoUrl}
+                                    controls
+                                    className="w-full rounded-lg aspect-video bg-black"
+                                  />
+                                ) : (
+                                  <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
+                                    <div className="text-center text-muted-foreground">
+                                      <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                      <p className="text-sm">동영상을 찾을 수 없습니다</p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
 
                               {/* 오른쪽: 세부 지표 */}
@@ -766,6 +827,7 @@ export default function Feedback() {
                   <div className="space-y-6">
                     {finalVoiceData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
+                      const videoUrl = videoUrlMap.get(feedback.attempt_id);
 
                       // 메트릭 라벨에 따른 아이콘 매핑
                       const getMetricIcon = (label: string) => {
@@ -807,12 +869,27 @@ export default function Feedback() {
                               {/* 왼쪽: 동영상 영역 */}
                               <div>
                                 <h4 className="text-sm font-semibold mb-3">동영상</h4>
-                                <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
-                                  <div className="text-center text-muted-foreground">
-                                    <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                                    <p className="text-sm">동영상 준비 중</p>
+                                {videoLoading ? (
+                                  <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
+                                    <div className="text-center text-muted-foreground">
+                                      <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin" />
+                                      <p className="text-sm">동영상 로딩 중...</p>
+                                    </div>
                                   </div>
-                                </div>
+                                ) : videoUrl ? (
+                                  <video
+                                    src={videoUrl}
+                                    controls
+                                    className="w-full rounded-lg aspect-video bg-black"
+                                  />
+                                ) : (
+                                  <div className="bg-muted/50 rounded-lg aspect-video flex items-center justify-center border-2 border-dashed border-border">
+                                    <div className="text-center text-muted-foreground">
+                                      <Video className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                                      <p className="text-sm">동영상을 찾을 수 없습니다</p>
+                                    </div>
+                                  </div>
+                                )}
                               </div>
 
                               {/* 오른쪽: 세부 지표 */}
