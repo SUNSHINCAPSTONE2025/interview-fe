@@ -43,20 +43,18 @@ function getRatingBadgeStyle(rating: string | undefined) {
   const ratingLower = rating.toLowerCase();
 
   // 양호/우수 → 파랑색
-  if (ratingLower.includes("양호") || ratingLower.includes("우수") ||
-      ratingLower.includes("good") || ratingLower.includes("excellent")) {
+  if (ratingLower.includes("양호") || ratingLower.includes("우수") || ratingLower.includes("적정")) {
     return { variant: "default" as const, className: "bg-blue-500 hover:bg-blue-600" };
   }
 
   // 미흡/개선 필요 → 빨강색
   if (ratingLower.includes("미흡") || ratingLower.includes("개선") ||
-      ratingLower.includes("poor") || ratingLower.includes("needs improvement")) {
+      ratingLower.includes("주의") ) {
     return { variant: "destructive" as const, className: "" };
   }
 
   // 보통/중간 → 노랑색
-  if (ratingLower.includes("보통") || ratingLower.includes("중간") ||
-      ratingLower.includes("average") || ratingLower.includes("normal")) {
+  if (ratingLower.includes("보통") || ratingLower.includes("중간")) {
     return { variant: "secondary" as const, className: "bg-yellow-500 hover:bg-yellow-600 text-white" };
   }
 
@@ -235,21 +233,36 @@ export default function Feedback() {
     ? attemptIds
     : (unifiedData?.attempts.map(a => a.attempt_id) || []);
 
-  // 동영상 URL 조회 - 첫 번째 attempt만 조회 (모든 질문이 동일한 동영상 사용)
-  const firstAttemptId = effectiveAttemptIds[0];
+  // 동영상 URL 조회 - 각 질문(attempt)마다 한 번씩 조회
   const {
-    data: videoData,
+    data: videoUrlList,
     isLoading: videoLoading,
   } = useQuery({
-    queryKey: ["video-url", sessionId, firstAttemptId],
-    queryFn: () => feedbackApi.getVideoUrl(sessionId, firstAttemptId),
-    enabled: !!sessionId && !!firstAttemptId,
-    retry: false, // 동영상이 없을 수도 있으므로 재시도 안 함
+    queryKey: ["video-urls", sessionId, effectiveAttemptIds],
+    queryFn: async () => {
+      if (effectiveAttemptIds.length === 0) return [];
+
+      // 모든 질문에 대해 병렬로 동영상 URL 조회 (각 질문당 1번)
+      const promises = effectiveAttemptIds.map(attemptId =>
+        feedbackApi.getVideoUrl(sessionId, attemptId).catch(() => null) // 에러 시 null 반환
+      );
+      return Promise.all(promises);
+    },
+    enabled: !!sessionId && effectiveAttemptIds.length > 0,
+    retry: false, // 동영상이 없을 수도 있으므로
     ...queryBaseOptions,
   });
 
-  // 모든 질문에 동일한 동영상 URL 사용
-  const sharedVideoUrl = videoData?.video_url;
+  // attempt_id를 키로 하는 video URL map 생성
+  // 각 질문의 동영상을 표정/자세/목소리 탭에서 재사용
+  const videoUrlMap = new Map<number, string>();
+  if (videoUrlList && effectiveAttemptIds.length > 0) {
+    videoUrlList.forEach((videoData, index) => {
+      if (videoData?.video_url) {
+        videoUrlMap.set(effectiveAttemptIds[index], videoData.video_url);
+      }
+    });
+  }
 
   // 로딩 상태
   const isLoading = shouldUseUnifiedApi
@@ -543,6 +556,7 @@ export default function Feedback() {
                   <div className="space-y-6">
                     {finalExpressionData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
+                      const videoUrl = videoUrlMap.get(feedback.attempt_id);
 
                       return (
                         <Card key={feedback.attempt_id} className="bg-muted/30 overflow-hidden">
@@ -573,9 +587,9 @@ export default function Feedback() {
                                       <p className="text-sm">동영상 로딩 중...</p>
                                     </div>
                                   </div>
-                                ) : sharedVideoUrl ? (
+                                ) : videoUrl ? (
                                   <video
-                                    src={sharedVideoUrl}
+                                    src={videoUrl}
                                     controls
                                     className="w-full rounded-lg aspect-video bg-black"
                                   />
@@ -686,6 +700,7 @@ export default function Feedback() {
                     {finalPostureData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
                       const pose = feedback.pose_analysis;
+                      const videoUrl = videoUrlMap.get(feedback.attempt_id);
 
                       return (
                         <Card key={feedback.session_id} className="bg-muted/30 overflow-hidden">
@@ -720,9 +735,9 @@ export default function Feedback() {
                                       <p className="text-sm">동영상 로딩 중...</p>
                                     </div>
                                   </div>
-                                ) : sharedVideoUrl ? (
+                                ) : videoUrl ? (
                                   <video
-                                    src={sharedVideoUrl}
+                                    src={videoUrl}
                                     controls
                                     className="w-full rounded-lg aspect-video bg-black"
                                   />
@@ -820,6 +835,7 @@ export default function Feedback() {
                   <div className="space-y-6">
                     {finalVoiceData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
+                      const videoUrl = videoUrlMap.get(feedback.attempt_id);
 
                       // 메트릭 라벨에 따른 아이콘 매핑
                       const getMetricIcon = (label: string) => {
@@ -868,9 +884,9 @@ export default function Feedback() {
                                       <p className="text-sm">동영상 로딩 중...</p>
                                     </div>
                                   </div>
-                                ) : sharedVideoUrl ? (
+                                ) : videoUrl ? (
                                   <video
-                                    src={sharedVideoUrl}
+                                    src={videoUrl}
                                     controls
                                     className="w-full rounded-lg aspect-video bg-black"
                                   />
