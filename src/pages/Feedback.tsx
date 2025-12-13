@@ -81,6 +81,9 @@ export default function Feedback() {
   // Check if coming from history (use unified API) or from practice end (use individual APIs)
   const fromHistory = searchParams.get("from") === "history";
 
+  // 통합 API 사용 여부: from=history이거나 attempt_ids가 없는 경우
+  const shouldUseUnifiedApi = fromHistory || attemptIds.length === 0;
+
   // 중복 refetch를 방지하기 위한 공통 옵션 (포커스/재연결 시 재요청 끔, 5분 캐싱)
   const queryBaseOptions = {
     refetchOnWindowFocus: false,
@@ -96,7 +99,7 @@ export default function Feedback() {
     ...queryBaseOptions,
   });
 
-  // 🔄 통합 피드백 조회 (from=history인 경우)
+  // 🔄 통합 피드백 조회 (from=history이거나 attempt_ids가 없는 경우)
   const {
     data: unifiedData,
     isLoading: unifiedLoading,
@@ -104,7 +107,7 @@ export default function Feedback() {
   } = useQuery({
     queryKey: ["feedback-unified", sessionId],
     queryFn: () => feedbackApi.getAllAttemptsFeedback(sessionId),
-    enabled: !!sessionId && fromHistory,
+    enabled: !!sessionId && shouldUseUnifiedApi,
     ...queryBaseOptions,
   });
 
@@ -125,7 +128,7 @@ export default function Feedback() {
       );
       return Promise.all(promises);
     },
-    enabled: !!sessionId && attemptIds.length > 0 && !fromHistory,
+    enabled: !!sessionId && attemptIds.length > 0 && !shouldUseUnifiedApi,
     ...queryBaseOptions,
   });
 
@@ -146,7 +149,7 @@ export default function Feedback() {
       );
       return Promise.all(promises);
     },
-    enabled: !!sessionId && attemptIds.length > 0 && !fromHistory,
+    enabled: !!sessionId && attemptIds.length > 0 && !shouldUseUnifiedApi,
     // 분석 대기(202) 응답이 있으면 완료될 때까지 3초 간격으로 폴링
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -176,7 +179,7 @@ export default function Feedback() {
       );
       return Promise.all(promises);
     },
-    enabled: !!sessionId && attemptIds.length > 0 && !fromHistory, // 활성화
+    enabled: !!sessionId && attemptIds.length > 0 && !shouldUseUnifiedApi,
     ...queryBaseOptions,
   });
 
@@ -196,24 +199,24 @@ export default function Feedback() {
       );
       return Promise.all(promises);
     },
-    enabled: !!sessionId && attemptIds.length > 0 && !fromHistory,
+    enabled: !!sessionId && attemptIds.length > 0 && !shouldUseUnifiedApi,
     ...queryBaseOptions,
   });
 
   // 🔄 통합 API 데이터를 개별 API 형식으로 변환
-  const finalExpressionData = fromHistory && unifiedData
+  const finalExpressionData = shouldUseUnifiedApi && unifiedData
     ? unifiedData.attempts.map(a => a.expression).filter(Boolean) as ExpressionFeedbackResponse[]
     : expressionDataList;
 
-  const finalPostureData = fromHistory && unifiedData
+  const finalPostureData = shouldUseUnifiedApi && unifiedData
     ? unifiedData.attempts.map(a => a.posture).filter(Boolean) as PostureFeedbackResponse[]
     : postureDataList;
 
-  const finalVoiceData = fromHistory && unifiedData
+  const finalVoiceData = shouldUseUnifiedApi && unifiedData
     ? unifiedData.attempts.map(a => a.voice).filter(Boolean) as VoiceFeedbackResponse[]
     : voiceDataList;
 
-  const finalTextFeedback = fromHistory && unifiedData
+  const finalTextFeedback = shouldUseUnifiedApi && unifiedData
     ? unifiedData.attempts.map(a => ({
         attempt_id: a.attempt_id,
         question_text: a.question_text,
@@ -227,37 +230,29 @@ export default function Feedback() {
       }))
     : textFeedbackList;
 
-  // 동영상 URL 조회 - 모든 attempts에 대해 병렬 조회
+  // attempt_ids 추출: URL 파라미터에서 또는 통합 피드백 데이터에서
+  const effectiveAttemptIds = attemptIds.length > 0
+    ? attemptIds
+    : (unifiedData?.attempts.map(a => a.attempt_id) || []);
+
+  // 동영상 URL 조회 - 첫 번째 attempt만 조회 (모든 질문이 동일한 동영상 사용)
+  const firstAttemptId = effectiveAttemptIds[0];
   const {
-    data: videoUrlList,
+    data: videoData,
     isLoading: videoLoading,
   } = useQuery({
-    queryKey: ["video-urls", sessionId, attemptIds],
-    queryFn: async () => {
-      if (attemptIds.length === 0) return [];
-
-      // 모든 attempts에 대해 병렬 조회
-      const promises = attemptIds.map(attemptId =>
-        feedbackApi.getVideoUrl(sessionId, attemptId).catch(() => null) // 에러 시 null 반환
-      );
-      return Promise.all(promises);
-    },
-    enabled: !!sessionId && attemptIds.length > 0,
+    queryKey: ["video-url", sessionId, firstAttemptId],
+    queryFn: () => feedbackApi.getVideoUrl(sessionId, firstAttemptId),
+    enabled: !!sessionId && !!firstAttemptId,
+    retry: false, // 동영상이 없을 수도 있으므로 재시도 안 함
     ...queryBaseOptions,
   });
 
-  // attempt_id를 키로 하는 video URL map 생성
-  const videoUrlMap = new Map<number, string>();
-  if (videoUrlList && attemptIds.length > 0) {
-    videoUrlList.forEach((videoData, index) => {
-      if (videoData?.video_url) {
-        videoUrlMap.set(attemptIds[index], videoData.video_url);
-      }
-    });
-  }
+  // 모든 질문에 동일한 동영상 URL 사용
+  const sharedVideoUrl = videoData?.video_url;
 
   // 로딩 상태
-  const isLoading = fromHistory
+  const isLoading = shouldUseUnifiedApi
     ? unifiedLoading
     : (expressionLoading || postureLoading || voiceLoading || textLoading);
 
@@ -341,8 +336,8 @@ export default function Feedback() {
   }
 
   // 에러 화면
-  if (fromHistory ? unifiedError : (expressionError || postureError || voiceError || textError)) {
-    const error = fromHistory ? unifiedError : (expressionError || postureError || voiceError || textError);
+  if (shouldUseUnifiedApi ? unifiedError : (expressionError || postureError || voiceError || textError)) {
+    const error = shouldUseUnifiedApi ? unifiedError : (expressionError || postureError || voiceError || textError);
     return (
       <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
         <Card className="max-w-md">
@@ -548,7 +543,6 @@ export default function Feedback() {
                   <div className="space-y-6">
                     {finalExpressionData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
-                      const videoUrl = videoUrlMap.get(feedback.attempt_id);
 
                       return (
                         <Card key={feedback.attempt_id} className="bg-muted/30 overflow-hidden">
@@ -579,9 +573,9 @@ export default function Feedback() {
                                       <p className="text-sm">동영상 로딩 중...</p>
                                     </div>
                                   </div>
-                                ) : videoUrl ? (
+                                ) : sharedVideoUrl ? (
                                   <video
-                                    src={videoUrl}
+                                    src={sharedVideoUrl}
                                     controls
                                     className="w-full rounded-lg aspect-video bg-black"
                                   />
@@ -692,7 +686,6 @@ export default function Feedback() {
                     {finalPostureData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
                       const pose = feedback.pose_analysis;
-                      const videoUrl = videoUrlMap.get(feedback.attempt_id);
 
                       return (
                         <Card key={feedback.session_id} className="bg-muted/30 overflow-hidden">
@@ -727,9 +720,9 @@ export default function Feedback() {
                                       <p className="text-sm">동영상 로딩 중...</p>
                                     </div>
                                   </div>
-                                ) : videoUrl ? (
+                                ) : sharedVideoUrl ? (
                                   <video
-                                    src={videoUrl}
+                                    src={sharedVideoUrl}
                                     controls
                                     className="w-full rounded-lg aspect-video bg-black"
                                   />
@@ -827,7 +820,6 @@ export default function Feedback() {
                   <div className="space-y-6">
                     {finalVoiceData.map((feedback, index) => {
                       const questionText = sessionData?.questions?.[index]?.text || `질문 ${index + 1}`;
-                      const videoUrl = videoUrlMap.get(feedback.attempt_id);
 
                       // 메트릭 라벨에 따른 아이콘 매핑
                       const getMetricIcon = (label: string) => {
@@ -876,9 +868,9 @@ export default function Feedback() {
                                       <p className="text-sm">동영상 로딩 중...</p>
                                     </div>
                                   </div>
-                                ) : videoUrl ? (
+                                ) : sharedVideoUrl ? (
                                   <video
-                                    src={videoUrl}
+                                    src={sharedVideoUrl}
                                     controls
                                     className="w-full rounded-lg aspect-video bg-black"
                                   />
