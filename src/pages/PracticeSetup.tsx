@@ -3,24 +3,41 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Camera, 
-  Mic, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Camera,
+  Mic,
+  CheckCircle2,
+  XCircle,
   AlertCircle,
   ArrowLeft,
-  Play
+  Play,
+  Loader2,
+  RefreshCw
 } from "lucide-react";
-import { Link, useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate, useSearchParams, useLocation } from "react-router-dom";
+import { sessionsApi } from "@/api/sessions";
+import { useToast } from "@/hooks/use-toast";
+import type { PracticeType } from "@/types/session";
 
 export default function PracticeSetup() {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { toast } = useToast();
+
   const [cameraPermission, setCameraPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [micPermission, setMicPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [acknowledged, setAcknowledged] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
+
+  // Get practice type from URL params
+  const practiceType = searchParams.get("type") as PracticeType;
+
+  // Get session data from location state (passed from PracticeGuide)
+  const sessionId = location.state?.sessionId as number | undefined;
+  const questions = location.state?.questions;
+  const plan = location.state?.plan;
 
   const checkCameraPermission = async () => {
     try {
@@ -42,10 +59,39 @@ export default function PracticeSetup() {
     }
   };
 
-  const allChecksComplete = 
-    cameraPermission === 'granted' && 
-    micPermission === 'granted' && 
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
+  const allChecksComplete =
+    cameraPermission === 'granted' &&
+    micPermission === 'granted' &&
     acknowledged;
+
+  // Handle interview start - navigate to practice room
+  const handleStartInterview = async () => {
+    if (!id || !practiceType || !questions || !sessionId) {
+      toast({
+        title: "오류",
+        description: "세션 정보가 올바르지 않습니다.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // PracticeGuide에서 이미 세션이 생성되었으므로 바로 면접 실행 페이지로 이동
+    toast({
+      title: "면접 시작",
+      description: `${questions.length}개의 질문으로 면접을 시작합니다.`,
+    });
+
+    navigate(`/practice/${id}/run?session_id=${sessionId}`, {
+      state: {
+        questions,
+        plan
+      }
+    });
+  };
 
   const notices = [
     {
@@ -113,7 +159,7 @@ export default function PracticeSetup() {
                       <p className="text-sm text-muted-foreground">
                         {cameraPermission === 'pending' && '권한을 확인해주세요'}
                         {cameraPermission === 'granted' && '권한이 허용되었습니다'}
-                        {cameraPermission === 'denied' && '권한이 거부되었습니다. 브라우저 설정을 확인하세요'}
+                        {cameraPermission === 'denied' && '브라우저 주소창의 🔒 아이콘을 클릭하여 카메라 권한을 허용한 후 새로고침하세요'}
                       </p>
                     </div>
                   </div>
@@ -122,11 +168,14 @@ export default function PracticeSetup() {
                       확인
                     </Button>
                   )}
+                  {cameraPermission === 'denied' && (
+                    <Button onClick={handleRefresh} size="sm" variant="outline">
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      새로고침
+                    </Button>
+                  )}
                   {cameraPermission === 'granted' && (
                     <CheckCircle2 className="h-6 w-6 text-success" />
-                  )}
-                  {cameraPermission === 'denied' && (
-                    <XCircle className="h-6 w-6 text-destructive" />
                   )}
                 </div>
 
@@ -149,7 +198,7 @@ export default function PracticeSetup() {
                       <p className="text-sm text-muted-foreground">
                         {micPermission === 'pending' && '권한을 확인해주세요'}
                         {micPermission === 'granted' && '권한이 허용되었습니다'}
-                        {micPermission === 'denied' && '권한이 거부되었습니다. 브라우저 설정을 확인하세요'}
+                        {micPermission === 'denied' && '브라우저 주소창의 🔒 아이콘을 클릭하여 마이크 권한을 허용한 후 새로고침하세요'}
                       </p>
                     </div>
                   </div>
@@ -158,11 +207,14 @@ export default function PracticeSetup() {
                       확인
                     </Button>
                   )}
+                  {micPermission === 'denied' && (
+                    <Button onClick={handleRefresh} size="sm" variant="outline">
+                      <RefreshCw className="h-4 w-4 mr-1" />
+                      새로고침
+                    </Button>
+                  )}
                   {micPermission === 'granted' && (
                     <CheckCircle2 className="h-6 w-6 text-success" />
-                  )}
-                  {micPermission === 'denied' && (
-                    <XCircle className="h-6 w-6 text-destructive" />
                   )}
                 </div>
               </CardContent>
@@ -219,15 +271,24 @@ export default function PracticeSetup() {
                     모든 항목을 확인해주세요
                   </Badge>
                 )}
-                <Button 
+                <Button
                   variant="hero"
                   size="lg"
-                  disabled={!allChecksComplete}
-                  onClick={() => navigate(`/practice/${id}/run`)}
+                  disabled={!allChecksComplete || isCreatingSession}
+                  onClick={handleStartInterview}
                   className="shadow-hover"
                 >
-                  <Play className="h-5 w-5 mr-2" />
-                  면접 시작
+                  {isCreatingSession ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      세션 생성 중...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-5 w-5 mr-2" />
+                      면접 시작
+                    </>
+                  )}
                 </Button>
               </div>
             </div>

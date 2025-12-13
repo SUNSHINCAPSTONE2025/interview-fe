@@ -20,6 +20,7 @@ interface QAItem {
 
 export default function NewSession() {
   const navigate = useNavigate();
+  const { toast: showToast } = useToast();
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<SessionMode>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,7 +110,7 @@ export default function NewSession() {
       // 2. Resume 생성 (자소서 Q&A)
       if (validQAItems.length > 0) {
         const resumeData = {
-          content_id: contentResponse.id,
+          content_id: contentResponse.content.id, // content 객체 안의 id 사용
           version: 1, // 첫 버전
           items: validQAItems,
         };
@@ -120,6 +121,7 @@ export default function NewSession() {
 
         // 3. 자소서 기반 면접 질문 생성
         const generateQuestionsData = {
+          content_id: contentResponse.content.id, // content 객체 안의 id 사용
           qas: validQAItems.map(item => ({
             q: item.question,
             a: item.answer,
@@ -131,12 +133,12 @@ export default function NewSession() {
 
         const questionsResponse = await contentsApi.generateInterviewQuestions(generateQuestionsData);
 
-        toast.success("면접 질문이 생성되었습니다!");
+        toast.success(`면접 질문 ${questionsResponse.generated_count}개가 생성되었습니다!`);
       }
 
       // 4. 생성된 세션 상세 페이지로 이동
       toast.success("면접 준비가 완료되었습니다!");
-      navigate(`/session/${contentResponse.id}`);
+      navigate(`/session/${contentResponse.content.id}`);
 
     } catch (error) {
       console.error("Failed to create session:", error);
@@ -214,7 +216,8 @@ export default function NewSession() {
                   
                   <button
                     onClick={() => {
-                      toast("준비 중입니다", {
+                      showToast({
+                        title: "준비 중입니다",
                         description: "업데이트를 기대해주세요!",
                       });
                     }}

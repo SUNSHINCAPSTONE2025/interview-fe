@@ -4,24 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Play, Target, Clock, Lightbulb } from "lucide-react";
+import { ArrowLeft, Play, Target, Clock, Lightbulb, Loader2 } from "lucide-react";
 import { Link, useParams, useNavigate } from "react-router-dom";
+import { sessionsApi } from "@/api/sessions";
+import { useToast } from "@/hooks/use-toast";
+import type { PracticeType } from "@/types/session";
 
 export default function PracticeGuide() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [practiceType, setPracticeType] = useState("");
+  const { toast } = useToast();
+  const [step, setStep] = useState(1);
+  const [practiceType, setPracticeType] = useState<PracticeType | "">("");
+  const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
-  // Mock session data - TODO: DB에서 가져올 것
-  const session = {
-    id: "1",
-    title: "구글 소프트웨어 엔지니어",
-    mode: "Interview" as const,
-    totalQuestions: 15,
-    practiceTypes: {
-      "technical": { label: "기술 질문", count: 8 },
-      "behavioral": { label: "소프트 질문", count: 7 }
-    }
+  const practiceTypes = {
+    "soft": { label: "소프트 질문", count: 5 },
+    "job": { label: "직무 질문", count: 5 }
   };
 
   const tips = [
@@ -31,12 +30,54 @@ export default function PracticeGuide() {
     "명확하고 적절한 속도로 말하세요 - 분당 150-160단어를 목표로 하세요"
   ];
 
-  const getSelectedTypeInfo = () => {
-    if (!practiceType) return null;
-    return session.practiceTypes[practiceType as keyof typeof session.practiceTypes];
-  };
+  // 선택된 유형의 질문 개수와 예상 시간 계산
+  const selectedTypeData = practiceType ? practiceTypes[practiceType as keyof typeof practiceTypes] : null;
+  const estimatedTime = selectedTypeData ? selectedTypeData.count * 2 : 0; // 질문당 2분
 
-  const estimatedTime = getSelectedTypeInfo()?.count ? getSelectedTypeInfo()!.count * 2 : 0;
+  // 질문 생성 및 다음 페이지로 이동
+  const handleStartPractice = async () => {
+    if (!id || !practiceType) {
+      toast({
+        title: "오류",
+        description: "연습 유형을 선택해주세요.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingQuestions(true);
+
+    try {
+      const contentId = parseInt(id);
+
+      // 세션 시작 API 호출 (질문 포함)
+      const response = await sessionsApi.startSession(contentId, {
+        practice_type: practiceType,
+        count: 5, // 5개 고정
+      });
+
+      toast({
+        title: "세션 시작",
+        description: `${response.questions.length}개의 질문으로 세션이 시작되었습니다.`,
+      });
+
+      // 세션 ID와 질문을 가지고 다음 페이지로 이동
+      navigate(`/practice/${id}/setup?type=${practiceType}`, {
+        state: {
+          sessionId: response.session_id,
+          questions: response.questions,
+        }
+      });
+    } catch (error) {
+      console.error("Failed to start session:", error);
+      toast({
+        title: "세션 시작 실패",
+        description: "세션을 시작하는 중 오류가 발생했습니다. 다시 시도해주세요.",
+        variant: "destructive",
+      });
+      setIsGeneratingQuestions(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
@@ -50,89 +91,109 @@ export default function PracticeGuide() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">{session.title}</h1>
-              <p className="text-muted-foreground">연습 가이드</p>
+              <h1 className="text-3xl font-bold">연습 가이드</h1>
+              <p className="text-muted-foreground">면접 연습을 시작합니다</p>
             </div>
           </div>
 
-          {/* Practice Type Selection & Summary */}
-          <Card className="bg-gradient-card shadow-card">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                연습 유형 선택
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <RadioGroup value={practiceType} onValueChange={setPracticeType}>
-                {Object.entries(session.practiceTypes).map(([key, typeInfo]) => (
-                  <div key={key} className="flex items-center space-x-2 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
-                    <RadioGroupItem value={key} id={key} />
-                    <Label htmlFor={key} className="flex-1 cursor-pointer">
-                      {typeInfo.label} ({typeInfo.count}개)
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
+          {/* Step 1: Practice Type Selection */}
+          {step === 1 && (
+            <Card className="bg-gradient-card shadow-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Target className="h-5 w-5" />
+                  연습 유형 선택
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <RadioGroup value={practiceType} onValueChange={setPracticeType}>
+                  {Object.entries(practiceTypes).map(([key, data]) => (
+                    <div key={key} className="flex items-center space-x-2 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
+                      <RadioGroupItem value={key} id={key} />
+                      <Label htmlFor={key} className="flex-1 cursor-pointer">
+                        {data.label}
+                      </Label>
+                    </div>
+                  ))}
+                </RadioGroup>
 
-              {practiceType && (
-                <div className="mt-6 space-y-4">
-                  {/* Tips */}
-                  <Card className="bg-muted/50">
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Lightbulb className="h-4 w-4" />
-                        연습 팁
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {tips.map((tip, index) => (
-                          <li key={index} className="flex items-start gap-3">
-                            <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                              <span className="text-xs font-medium text-primary">{index + 1}</span>
-                            </div>
-                            <span className="text-sm">{tip}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-
-                  {/* Summary */}
-                  <Card className="bg-primary/5 border-primary/20">
-                    <CardHeader>
-                      <CardTitle className="text-base">연습 준비 완료</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">유형</span>
-                        <span className="font-medium">{getSelectedTypeInfo()?.label}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">질문 개수</span>
-                        <Badge>{getSelectedTypeInfo()?.count}개</Badge>
-                      </div>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">예상 시간</span>
-                        <Badge variant="outline">
-                          <Clock className="h-3 w-3 mr-1" />
-                          약 {estimatedTime}분
-                        </Badge>
-                      </div>
-                    </CardContent>
-                  </Card>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => setStep(2)}
+                    disabled={!practiceType}
+                  >
+                    계속
+                  </Button>
                 </div>
-              )}
+              </CardContent>
+            </Card>
+          )}
 
-              <div className="flex justify-end">
-                <Button 
-                  onClick={() => navigate(`/practice-room/${id}`)}
-                  disabled={!practiceType}
-                  size="lg"
+          {/* Step 2: Tips and Start */}
+          {step === 2 && (
+            <div className="space-y-6">
+              {/* Tips */}
+              <Card className="bg-gradient-card shadow-card">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5" />
+                    연습 팁
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {tips.map((tip, index) => (
+                      <li key={index} className="flex items-start gap-3">
+                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <span className="text-xs font-medium text-primary">{index + 1}</span>
+                        </div>
+                        <span className="text-sm">{tip}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Session Summary */}
+              <Card className="bg-gradient-primary text-primary-foreground shadow-hover">
+                <CardContent className="p-6">
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">연습 준비 완료!</h3>
+                    <div className="space-y-2 text-sm opacity-90">
+                      <p>• 유형: {selectedTypeData?.label}</p>
+                      <p>• 질문 개수: {selectedTypeData?.count}개</p>
+                      <p>• 예상 시간: 약 {estimatedTime}분</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              <div className="flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep(1)}
+                  disabled={isGeneratingQuestions}
                 >
-                  <Play className="h-4 w-4 mr-2" />
-                  연습 시작
+                  뒤로
+                </Button>
+                <Button
+                  variant="hero"
+                  onClick={handleStartPractice}
+                  disabled={isGeneratingQuestions}
+                  className="shadow-hover"
+                >
+                  {isGeneratingQuestions ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      질문 생성 중...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="h-5 w-5 mr-2" />
+                      연습 시작
+                    </>
+                  )}
                 </Button>
               </div>
             </CardContent>
