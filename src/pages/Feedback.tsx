@@ -528,9 +528,13 @@ export default function Feedback() {
                             </h4>
                             <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
                               {feedback.evaluation_comment ? (
-                                <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                                  {feedback.evaluation_comment}
-                                </p>
+                                <div className="space-y-3">
+                                  {feedback.evaluation_comment.split('\n').filter(line => line.trim()).map((line, idx) => (
+                                    <p key={idx} className="text-sm leading-relaxed">
+                                      {line}
+                                    </p>
+                                  ))}
+                                </div>
                               ) : (
                                 <p className="text-sm text-muted-foreground italic">
                                   평가 결과가 아직 생성되지 않았습니다
