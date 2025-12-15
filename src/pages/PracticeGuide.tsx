@@ -196,8 +196,9 @@ export default function PracticeGuide() {
                   )}
                 </Button>
               </div>
-            </div>
-          )}
+            </CardContent>
+          </Card>
+
         </div>
       </div>
     </div>

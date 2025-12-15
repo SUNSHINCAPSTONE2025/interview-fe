@@ -10,7 +10,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { contentsApi } from "@/api/contents";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
-import { useToast } from "@/hooks/use-toast";
 
 type SessionMode = "Interview" | "Presentation" | null;
 
