@@ -106,7 +106,7 @@ export default function PracticeGuide() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                <RadioGroup value={practiceType} onValueChange={setPracticeType}>
+                <RadioGroup value={practiceType} onValueChange={(value) => setPracticeType(value as PracticeType | "")}>
                   {Object.entries(practiceTypes).map(([key, data]) => (
                     <div key={key} className="flex items-center space-x-2 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
                       <RadioGroupItem value={key} id={key} />
