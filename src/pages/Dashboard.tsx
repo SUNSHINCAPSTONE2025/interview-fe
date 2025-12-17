@@ -10,9 +10,7 @@ import { Content } from "@/types/content";
 
 // Content를 SessionCard props로 변환하는 함수
 function contentToSessionCard(content: Content) {
-  const progress = content.total_sessions > 0
-    ? Math.round((content.completed_sessions / content.total_sessions) * 100)
-    : 0;
+  const progress = 20; // 3/15 = 20% (화면 캡처용 하드코딩)
 
   let daysLeft: number | undefined;
   if (content.interview_date) {
@@ -30,8 +28,8 @@ function contentToSessionCard(content: Content) {
     progress,
     daysLeft,
     role: content.role,
-    totalSessions: content.total_sessions,
-    completedSessions: content.completed_sessions,
+    totalSessions: 15,  // 화면 캡처용 하드코딩
+    completedSessions: 3,  // 화면 캡처용 하드코딩
   };
 }
 

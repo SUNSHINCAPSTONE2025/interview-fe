@@ -62,6 +62,13 @@ function getRatingBadgeStyle(rating: string | undefined) {
   return { variant: "secondary" as const, className: "" };
 }
 
+// 점수를 평가 등급으로 변환 (100점 만점 기준)
+function getScoreRating(score: number): string {
+  if (score >= 80) return "양호";
+  if (score >= 60) return "보통";
+  return "개선 필요";
+}
+
 export default function Feedback() {
   const { id } = useParams(); // content_id or session_id (depends on caller)
   const [searchParams] = useSearchParams();
@@ -202,16 +209,23 @@ export default function Feedback() {
   });
 
   // 🔄 통합 API 데이터를 개별 API 형식으로 변환
+  // 백엔드가 각 피드백 객체에 attempt_id를 포함하지 않을 수 있으므로 명시적으로 추가
   const finalExpressionData = shouldUseUnifiedApi && unifiedData
-    ? unifiedData.attempts.map(a => a.expression).filter(Boolean) as ExpressionFeedbackResponse[]
+    ? unifiedData.attempts
+        .map(a => a.expression ? { ...a.expression, attempt_id: a.attempt_id } : null)
+        .filter(Boolean) as ExpressionFeedbackResponse[]
     : expressionDataList;
 
   const finalPostureData = shouldUseUnifiedApi && unifiedData
-    ? unifiedData.attempts.map(a => a.posture).filter(Boolean) as PostureFeedbackResponse[]
+    ? unifiedData.attempts
+        .map(a => a.posture ? { ...a.posture, attempt_id: a.attempt_id } : null)
+        .filter(Boolean) as PostureFeedbackResponse[]
     : postureDataList;
 
   const finalVoiceData = shouldUseUnifiedApi && unifiedData
-    ? unifiedData.attempts.map(a => a.voice).filter(Boolean) as VoiceFeedbackResponse[]
+    ? unifiedData.attempts
+        .map(a => a.voice ? { ...a.voice, attempt_id: a.attempt_id } : null)
+        .filter(Boolean) as VoiceFeedbackResponse[]
     : voiceDataList;
 
   const finalTextFeedback = shouldUseUnifiedApi && unifiedData
@@ -673,7 +687,7 @@ export default function Feedback() {
                                 </div>
 
                                 {/* 코멘트 */}
-                                {feedback.feedback_summary && (
+                                {feedback.feedback_summary && feedback.feedback_summary.trim() && (
                                   <div className="mt-4">
                                     <h4 className="text-sm font-semibold mb-3">코멘트</h4>
                                     <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
@@ -909,7 +923,11 @@ export default function Feedback() {
                                 <h4 className="text-sm font-semibold mb-3">세부 지표</h4>
                                 <div className="space-y-2">
                                   {feedback.metrics.map((metric) => {
-                                    const style = getRatingBadgeStyle(metric.level);
+                                    // score가 있으면 rating으로 변환, level이 있으면 그대로 사용
+                                    const score = typeof metric.score === 'number' ? metric.score :
+                                                  typeof metric.score === 'string' ? parseFloat(metric.score) : 0;
+                                    const rating = metric.level || getScoreRating(score);
+                                    const style = getRatingBadgeStyle(rating);
                                     const IconComponent = getMetricIcon(metric.label);
                                     return (
                                       <Card key={metric.id} className="bg-background/50">
@@ -919,11 +937,9 @@ export default function Feedback() {
                                               <IconComponent className="h-4 w-4 text-primary" />
                                               <span className="text-sm font-medium">{metric.label}</span>
                                             </div>
-                                            {metric.level && (
-                                              <Badge variant={style.variant} className={style.className}>
-                                                {metric.level}
-                                              </Badge>
-                                            )}
+                                            <Badge variant={style.variant} className={style.className}>
+                                              {rating}
+                                            </Badge>
                                           </div>
                                         </CardContent>
                                       </Card>
@@ -932,7 +948,7 @@ export default function Feedback() {
                                 </div>
 
                                 {/* 요약 코멘트 */}
-                                {feedback.summary && (
+                                {feedback.summary && feedback.summary.trim() && (
                                   <div className="mt-4">
                                     <h4 className="text-sm font-semibold mb-3">코멘트</h4>
                                     <div className="bg-gradient-to-br from-primary/5 to-primary/10 rounded-lg p-4 border border-primary/20">
