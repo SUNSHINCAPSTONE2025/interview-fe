@@ -367,30 +367,4 @@ const form = useForm({
 
 <br/>
 
-## 🤝 기여하기
-
-1. 이 저장소를 Fork 합니다
-2. Feature 브랜치를 생성합니다 (`git checkout -b feat/amazing-feature`)
-3. 변경사항을 커밋합니다 (`git commit -m 'feat: add amazing feature'`)
-4. 브랜치에 Push 합니다 (`git push origin feat/amazing-feature`)
-5. Pull Request를 생성합니다
-
-<br/>
-
-## 📄 License
-
-This project is licensed under the MIT License.
-
-<br/>
-
-## 🔗 관련 링크
-
-- **Backend Repository**: [interview-be](https://github.com/SUNSHINCAPSTONE2025/interview-be)
-- **Supabase**: [https://supabase.com](https://supabase.com)
-- **shadcn-ui**: [https://ui.shadcn.com](https://ui.shadcn.com)
-
-<br/>
-
----
-
 Made with ❤️ by SUNSHIN CAPSTONE 2025
